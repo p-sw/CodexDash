@@ -26,11 +26,12 @@ CodexDash now reuses the public-client OAuth/PKCE shape found in [`darvell/codex
 3. The web app opens the OpenAI authorization page in a popup.
 4. After successful login, OpenAI redirects back to the local callback bridge at `http://localhost:1455/auth/callback`.
 5. The callback bridge exchanges the authorization code for tokens, encrypts the session JSON in SQLite, and posts the result back to the main app window.
-6. CodexDash refreshes usage using the saved OAuth session and shows both the aggregate view and per-account details.
+6. If the callback bridge is unavailable, the user can copy the final `localhost:1455` URL from the browser address bar and paste it back into CodexDash to finish the same login attempt manually.
+7. CodexDash refreshes usage using the saved OAuth session and shows both the aggregate view and per-account details.
 
 ### Important local-dev note
 
-This flow depends on the local callback bridge being reachable on `localhost:1455`. In local development, make sure that port is free before starting the API.
+This flow works best when the local callback bridge is reachable on `localhost:1455`, but CodexDash now also supports a manual fallback where the user pastes the final callback URL if that port is unavailable. In local development, make sure that port is free if you want the automatic popup completion path.
 
 ## Local development
 

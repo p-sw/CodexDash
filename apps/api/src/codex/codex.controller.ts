@@ -16,6 +16,7 @@ import {
 } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { CodexService } from './codex.service';
+import { CompleteCodexManualLoginDto } from './dto/complete-codex-manual-login.dto';
 import { StartCodexLoginDto } from './dto/start-codex-login.dto';
 
 @Controller('codex')
@@ -44,6 +45,20 @@ export class CodexController {
     @Param('attemptId') attemptId: string,
   ) {
     return this.codexService.getLoginAttempt(user.sub, attemptId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('accounts/login/:attemptId/manual-complete')
+  completeManualLoginAttempt(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('attemptId') attemptId: string,
+    @Body() dto: CompleteCodexManualLoginDto,
+  ) {
+    return this.codexService.completeManualLoginAttempt(
+      user.sub,
+      attemptId,
+      dto.callbackUrl,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

@@ -22,6 +22,7 @@ import {
   CODEX_OAUTH_TOKEN_URL,
   createPkcePair,
   extractCodexIdentity,
+  parseCodexCallbackParams,
   renderCodexOauthCallbackHtml,
 } from './codex-oauth';
 import { aggregateUsagePayloads } from './usage-aggregator';
@@ -105,6 +106,34 @@ export class CodexService {
     }
 
     return this.toLoginAttemptView(attempt);
+  }
+
+  async completeManualLoginAttempt(
+    userId: string,
+    attemptId: string,
+    rawUrl: string,
+  ) {
+    const attempt = await this.prisma.openAiLoginAttempt.findFirst({
+      where: { id: attemptId, userId },
+    });
+    if (!attempt) {
+      throw new NotFoundException('Login attempt not found');
+    }
+
+    const params = parseCodexCallbackParams(rawUrl, this.getOauthRedirectUri());
+    if (!params.state) {
+      throw new BadRequestException(
+        'Missing OAuth state in the pasted callback URL.',
+      );
+    }
+    if (params.state !== attempt.state) {
+      throw new BadRequestException(
+        'This callback URL belongs to a different login attempt.',
+      );
+    }
+
+    await this.completeOauthAttempt(attempt, params);
+    return this.getLoginAttempt(userId, attemptId);
   }
 
   async cancelLoginAttempt(userId: string, attemptId: string) {
@@ -205,14 +234,9 @@ export class CodexService {
   }
 
   async handleOauthCallbackRequest(rawUrl: string) {
-    const callbackUrl = new URL(rawUrl, this.getOauthRedirectUri());
-    const code = callbackUrl.searchParams.get('code');
-    const state = callbackUrl.searchParams.get('state');
-    const oauthError = callbackUrl.searchParams.get('error');
-    const oauthErrorDescription =
-      callbackUrl.searchParams.get('error_description');
+    const params = parseCodexCallbackParams(rawUrl, this.getOauthRedirectUri());
 
-    if (!state) {
+    if (!params.state) {
       return this.renderCallbackPage({
         attemptId: 'unknown',
         status: 'error',
@@ -221,7 +245,7 @@ export class CodexService {
     }
 
     const attempt = await this.prisma.openAiLoginAttempt.findUnique({
-      where: { state },
+      where: { state: params.state },
     });
     if (!attempt) {
       return this.renderCallbackPage({
@@ -231,15 +255,23 @@ export class CodexService {
       });
     }
 
+    const result = await this.completeOauthAttempt(attempt, params);
+    return this.renderCallbackPage(result);
+  }
+
+  private async completeOauthAttempt(
+    attempt: PendingLoginAttemptRecord,
+    params: ReturnType<typeof parseCodexCallbackParams>,
+  ) {
     if (attempt.status !== 'pending') {
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
         status: attempt.status === 'completed' ? 'success' : 'error',
         message:
           attempt.status === 'completed'
             ? 'This OpenAI account is already connected.'
             : attempt.lastError || 'This login attempt is no longer active.',
-      });
+      } as const;
     }
 
     if (attempt.expiresAt.getTime() < Date.now()) {
@@ -247,29 +279,29 @@ export class CodexService {
         where: { id: attempt.id },
         data: { status: 'expired', lastError: 'Login window expired.' },
       });
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
-        status: 'error',
+        status: 'error' as const,
         message: 'This login window has expired. Please start again.',
-      });
+      };
     }
 
-    if (oauthError) {
-      const message = oauthErrorDescription
-        ? `${oauthError}: ${oauthErrorDescription}`
-        : oauthError;
+    if (params.oauthError) {
+      const message = params.oauthErrorDescription
+        ? `${params.oauthError}: ${params.oauthErrorDescription}`
+        : params.oauthError;
       await this.prisma.openAiLoginAttempt.update({
         where: { id: attempt.id },
         data: { status: 'error', lastError: message },
       });
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
-        status: 'error',
+        status: 'error' as const,
         message,
-      });
+      };
     }
 
-    if (!code) {
+    if (!params.code) {
       await this.prisma.openAiLoginAttempt.update({
         where: { id: attempt.id },
         data: {
@@ -277,11 +309,11 @@ export class CodexService {
           lastError: 'Missing authorization code from OpenAI.',
         },
       });
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
-        status: 'error',
+        status: 'error' as const,
         message: 'Missing authorization code from OpenAI.',
-      });
+      };
     }
 
     try {
@@ -290,7 +322,7 @@ export class CodexService {
         this.getEncryptionSecret(),
       );
       const tokenResponse = await this.exchangeAuthorizationCode(
-        code,
+        params.code,
         verifier,
       );
       const identity = extractCodexIdentity(tokenResponse.id_token ?? '');
@@ -363,11 +395,11 @@ export class CodexService {
         },
       });
 
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
-        status: 'success',
+        status: 'success' as const,
         message: `Connected ${sessionIdentity.email ?? attempt.label} to CodexDash.`,
-      });
+      };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'OpenAI login failed.';
@@ -375,11 +407,11 @@ export class CodexService {
         where: { id: attempt.id },
         data: { status: 'error', lastError: message },
       });
-      return this.renderCallbackPage({
+      return {
         attemptId: attempt.id,
-        status: 'error',
+        status: 'error' as const,
         message,
-      });
+      };
     }
   }
 
@@ -654,4 +686,16 @@ type LoginAttemptRecord = {
   completedAt: Date | null;
   lastError: string | null;
   account: AccountRecord | null;
+};
+
+type PendingLoginAttemptRecord = {
+  id: string;
+  userId: string;
+  label: string;
+  emailHint: string | null;
+  status: string;
+  state: string;
+  encryptedCodeVerifier: string;
+  expiresAt: Date;
+  lastError: string | null;
 };

@@ -53,6 +53,10 @@ export type StartCodexLoginInput = {
   emailHint?: string;
 };
 
+export type CompleteCodexManualLoginInput = {
+  callbackUrl: string;
+};
+
 export type StartCodexLoginResponse = {
   attemptId: string;
   authorizeUrl: string;

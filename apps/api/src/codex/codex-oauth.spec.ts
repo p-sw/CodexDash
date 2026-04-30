@@ -2,6 +2,7 @@ import {
   buildCodexAuthorizeUrl,
   createPkcePair,
   extractCodexIdentity,
+  parseCodexCallbackParams,
   renderCodexOauthCallbackHtml,
 } from './codex-oauth';
 
@@ -64,6 +65,19 @@ describe('codex-oauth helpers', () => {
       accountId: 'acct_123',
       planType: 'pro',
       expiresAt: new Date(1_800_000_000 * 1000),
+    });
+  });
+
+  it('parses a pasted localhost callback URL for manual completion', () => {
+    expect(
+      parseCodexCallbackParams(
+        'http://localhost:1455/auth/callback?code=abc123&state=state-123',
+      ),
+    ).toEqual({
+      code: 'abc123',
+      oauthError: null,
+      oauthErrorDescription: null,
+      state: 'state-123',
     });
   });
 

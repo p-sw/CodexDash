@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 import type {
   AuthResponse,
+  CompleteCodexManualLoginInput,
   LoginInput,
   RegisterInput,
   StartCodexLoginInput,
@@ -68,6 +69,10 @@ const loginSchema = z.object({
 const connectSchema = z.object({
   label: z.string().min(2),
   emailHint: z.string().optional(),
+});
+
+const manualCallbackSchema = z.object({
+  callbackUrl: z.string().min(10),
 });
 
 function AuthShell({
@@ -230,7 +235,7 @@ function AuthShell({
             <div className="space-y-3 text-sm text-slate-400">
               <p>
                 OpenAI account connection now uses a real sign-in flow based on the Codex client OAuth pattern.
-                After you click connect, CodexDash opens OpenAI login in a popup and receives the callback locally.
+                After you click connect, CodexDash opens OpenAI login in a popup and can also finish from a pasted callback URL if localhost is unavailable.
               </p>
               <Button
                 type="button"
@@ -263,12 +268,17 @@ function ConnectAccountDialog() {
     resolver: zodResolver(connectSchema),
     defaultValues: { label: '', emailHint: '' },
   });
+  const manualCallbackForm = useForm<z.infer<typeof manualCallbackSchema>>({
+    resolver: zodResolver(manualCallbackSchema),
+    defaultValues: { callbackUrl: '' },
+  });
 
   const startMutation = useMutation({
     mutationFn: api.startCodexLogin,
     onSuccess: (response) => {
       setAttemptId(response.attemptId);
       setAuthorizeUrl(response.authorizeUrl);
+      manualCallbackForm.reset();
       popupRef.current = window.open(
         response.authorizeUrl,
         'codexdash-openai-login',
@@ -279,6 +289,19 @@ function ConnectAccountDialog() {
       } else {
         toast.success('Continue the OpenAI sign-in flow in the popup.');
       }
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const manualCompleteMutation = useMutation({
+    mutationFn: ({
+      callbackUrl,
+      currentAttemptId,
+    }: CompleteCodexManualLoginInput & { currentAttemptId: string }) =>
+      api.completeCodexManualLogin(currentAttemptId, { callbackUrl }),
+    onSuccess: () => {
+      toast.success('Processing the pasted OpenAI callback URL…');
+      void attemptQuery.refetch();
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -297,6 +320,7 @@ function ConnectAccountDialog() {
       toast.success('Login attempt cancelled.');
       setAttemptId(null);
       setAuthorizeUrl(null);
+      manualCallbackForm.reset();
       popupRef.current?.close();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -321,6 +345,7 @@ function ConnectAccountDialog() {
         setAttemptId(null);
         setAuthorizeUrl(null);
         form.reset();
+        manualCallbackForm.reset();
         popupRef.current?.close();
         void queryClient.invalidateQueries({ queryKey: ['usage-summary'] });
       }, 0);
@@ -331,7 +356,7 @@ function ConnectAccountDialog() {
       handledAttemptStatusRef.current = statusKey;
       toast.error(attempt.lastError || 'OpenAI login failed.');
     }
-  }, [attemptQuery.data, form, queryClient]);
+  }, [attemptQuery.data, form, manualCallbackForm, queryClient]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -424,6 +449,45 @@ function ConnectAccountDialog() {
               </div>
             ) : null}
 
+            <div className="rounded-2xl border border-white/10 bg-white/4 p-4 text-sm text-slate-300">
+              <div className="font-medium text-white">Manual fallback</div>
+              <p className="mt-2 leading-6 text-slate-400">
+                If localhost:1455 is not listening, OpenAI may finish on a browser error page.
+                Copy the full URL from the address bar and paste it below to complete the login manually.
+              </p>
+              <form
+                className="mt-4 space-y-3"
+                onSubmit={manualCallbackForm.handleSubmit((values) => {
+                  if (!attemptId) {
+                    return;
+                  }
+                  manualCompleteMutation.mutate({
+                    callbackUrl: values.callbackUrl,
+                    currentAttemptId: attemptId,
+                  });
+                })}
+              >
+                <Input
+                  placeholder="http://localhost:1455/auth/callback?code=...&state=..."
+                  {...manualCallbackForm.register('callbackUrl')}
+                />
+                <p className="text-xs text-rose-300">
+                  {String(
+                    manualCallbackForm.formState.errors.callbackUrl?.message ?? '',
+                  )}
+                </p>
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={!attemptId || manualCompleteMutation.isPending}
+                >
+                  {manualCompleteMutation.isPending
+                    ? 'Processing callback…'
+                    : 'Complete with pasted URL'}
+                </Button>
+              </form>
+            </div>
+
             {attempt?.lastError ? (
               <div className="rounded-2xl border border-rose-500/20 bg-rose-500/8 p-4 text-sm text-rose-200">
                 {attempt.lastError}
@@ -477,7 +541,7 @@ function ConnectAccountDialog() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/4 p-4 text-sm leading-6 text-slate-400">
               CodexDash reuses the Codex public-client login shape discovered in
-              codex-pool, but presents it as an integrated popup flow instead of asking you to paste cookies manually.
+              codex-pool, but presents it as an integrated popup flow with a manual pasted-URL fallback instead of asking you to paste cookies manually.
             </div>
             <Button className="w-full" disabled={startMutation.isPending} type="submit">
               {startMutation.isPending ? 'Preparing login…' : 'Continue to OpenAI'}

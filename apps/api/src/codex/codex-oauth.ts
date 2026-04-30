@@ -77,6 +77,20 @@ export function extractCodexIdentity(idToken: string): CodexIdentity {
   };
 }
 
+export function parseCodexCallbackParams(
+  rawUrl: string,
+  redirectUri = CODEX_OAUTH_DEFAULT_REDIRECT_URI,
+) {
+  const callbackUrl = new URL(rawUrl, redirectUri);
+
+  return {
+    code: callbackUrl.searchParams.get('code'),
+    state: callbackUrl.searchParams.get('state'),
+    oauthError: callbackUrl.searchParams.get('error'),
+    oauthErrorDescription: callbackUrl.searchParams.get('error_description'),
+  };
+}
+
 export function renderCodexOauthCallbackHtml(input: {
   attemptId: string;
   status: 'success' | 'error';

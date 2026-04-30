@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   CodexLoginAttemptResponse,
+  CompleteCodexManualLoginInput,
   ConnectedAccount,
   LoginInput,
   RegisterInput,
@@ -59,6 +60,17 @@ export const api = {
     }),
   getCodexLoginAttempt: (attemptId: string) =>
     request<CodexLoginAttemptResponse>(`/codex/accounts/login/${attemptId}`),
+  completeCodexManualLogin: (
+    attemptId: string,
+    input: CompleteCodexManualLoginInput,
+  ) =>
+    request<CodexLoginAttemptResponse>(
+      `/codex/accounts/login/${attemptId}/manual-complete`,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+      },
+    ),
   cancelCodexLoginAttempt: (attemptId: string) =>
     request<{ ok: boolean }>(`/codex/accounts/login/${attemptId}/cancel`, {
       method: 'POST',
