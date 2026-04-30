@@ -1,11 +1,19 @@
 import { createServer } from 'node:http';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { CodexService } from './codex/codex.service';
+import {
+  buildSpaFallbackPath,
+  resolveCallbackListenHost,
+  resolveWebDistDir,
+  shouldServeSpaFallback,
+} from './runtime-assets';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors({ origin: true, credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({
@@ -14,6 +22,27 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  const webDistDir = resolveWebDistDir({
+    envWebDistDir: process.env.WEB_DIST_DIR,
+  });
+  if (webDistDir) {
+    app.useStaticAssets(webDistDir);
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (
+        shouldServeSpaFallback({
+          method: req.method,
+          path: req.path,
+          acceptHeader: req.headers.accept,
+        })
+      ) {
+        res.sendFile(buildSpaFallbackPath(webDistDir));
+        return;
+      }
+
+      next();
+    });
+  }
 
   await app.listen(process.env.PORT ?? 3001);
 
@@ -49,6 +78,9 @@ async function bootstrap() {
     })();
   });
 
-  callbackServer.listen(Number(callbackUrl.port || 80), callbackUrl.hostname);
+  callbackServer.listen(
+    Number(callbackUrl.port || 80),
+    resolveCallbackListenHost(callbackUrl.hostname),
+  );
 }
 void bootstrap();

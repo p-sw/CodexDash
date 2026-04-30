@@ -5,6 +5,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "bundle": "bun build --compile ./src/main.ts --target=bun-linux-x64-baseline --minify --outfile ./dist/codexdash -e @nestjs/platform-socket.io -e amqplib -e amqp-connection-manager -e ioredis -e nats -e mqtt -e @grpc/grpc-js -e @grpc/proto-loader -e kafkajs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -21,7 +22,9 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.1",
+    "@nestjs/microservices": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/websockets": "^11.0.1",
     "@prisma/client": "6.16.2",
     "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",

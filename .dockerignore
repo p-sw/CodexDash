@@ -1,0 +1,16 @@
+.git
+.gitignore
+.hermes
+node_modules
+**/node_modules
+apps/api/dist
+apps/web/dist
+coverage
+build
+*.log
+bun-debug.log*
+.env
+.env.*
+!.env.example
+apps/api/prisma/dev.db*
+README.md

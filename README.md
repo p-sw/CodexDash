@@ -43,6 +43,40 @@ bun run dev:api
 bun run dev:web -- --host 0.0.0.0
 ```
 
+## Docker image
+
+The production image uses a multi-stage build:
+- `bun install` + frontend build in the builder stage
+- `bun build --compile` to emit a single API executable at `apps/api/dist/codexdash`
+- a distroless runtime image that only contains the compiled binary and the built web assets
+
+Build the image:
+
+```bash
+docker build -t codexdash:latest .
+```
+
+Run it:
+
+```bash
+docker run --rm \
+  -p 3001:3001 \
+  -p 1455:1455 \
+  -e JWT_SECRET=replace-me \
+  -e ENCRYPTION_SECRET=replace-with-32-plus-chars \
+  -e DATABASE_URL=file:/data/codexdash.db \
+  -e CODEXDASH_FRONTEND_ORIGIN=http://localhost:3001 \
+  -e CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback \
+  -v codexdash-data:/data \
+  codexdash:latest
+```
+
+Notes:
+- The container serves the built React app from the same process on port `3001`.
+- The bundled frontend defaults to `http://localhost:3001` for API calls. If you need a different origin, rebuild the image with `VITE_API_BASE_URL` set at build time.
+- `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` is baked into the image so the callback bridge remains reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
+- If the callback bridge is still unreachable in your setup, the manual callback URL paste fallback remains available.
+
 ## Environment variables
 
 ### Root `.env`
