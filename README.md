@@ -73,8 +73,9 @@ docker run --rm \
 
 Notes:
 - The container serves the built React app from the same process on port `3001`.
-- The bundled frontend defaults to `http://localhost:3001` for API calls. If you need a different origin, rebuild the image with `VITE_API_BASE_URL` set at build time.
-- `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` is baked into the image so the callback bridge remains reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
+- The bundled frontend now defaults to the browser's current origin for API calls, so the production image can be deployed behind any host name without rebuilding the web bundle.
+- `VITE_API_BASE_URL` is now optional and mainly useful for local development when Vite runs on a different origin than the API.
+- `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
 - If the callback bridge is still unreachable in your setup, the manual callback URL paste fallback remains available.
 
 ## Environment variables
@@ -82,11 +83,12 @@ Notes:
 ### Root `.env`
 
 ```env
-JWT_SECRET=***
-ENCRYPTION_SECRET=***
+JWT_SECRET=replace-me
+ENCRYPTION_SECRET=replace-with-at-least-32-characters
 DATABASE_URL=file:./dev.db
 CODEXDASH_FRONTEND_ORIGIN=http://localhost:5173
 CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback
+# Optional in local dev when the web app does not share the API origin.
 VITE_API_BASE_URL=http://localhost:3001
 ```
 

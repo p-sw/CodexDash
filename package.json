@@ -21,7 +21,7 @@
     "dev:web": "bun run --filter @codexdash/web dev",
     "build": "bun run --filter @codexdash/api --filter @codexdash/web build",
     "lint": "bun run --filter @codexdash/api --filter @codexdash/web lint",
-    "test": "bun run --filter @codexdash/api --if-present test",
+    "test": "bun run --filter @codexdash/api --filter @codexdash/web --if-present test",
     "postinstall": "bun run --filter @codexdash/api prisma:generate"
   }
 }

@@ -10,9 +10,13 @@ import type {
   UsageSummary,
   UserProfile,
 } from '@codexdash/shared-types';
+import { getApiBaseUrl } from './api-base';
 import { clearToken, getToken } from './storage';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
+const API_BASE_URL = getApiBaseUrl(
+  import.meta.env.VITE_API_BASE_URL,
+  typeof window === 'undefined' ? undefined : window.location.origin,
+);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
