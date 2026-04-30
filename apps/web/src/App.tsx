@@ -1,20 +1,54 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AuthResponse, LoginInput, RegisterInput } from '@codexdash/shared-types';
-import { Activity, CirclePlus, Gauge, LogOut, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import type {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  StartCodexLoginInput,
+} from '@codexdash/shared-types';
+import {
+  Activity,
+  CirclePlus,
+  ExternalLink,
+  Gauge,
+  Link as LinkIcon,
+  LoaderCircle,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  Waypoints,
+} from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { api } from '@/lib/api';
 import { clearToken, getToken, setToken } from '@/lib/storage';
 import { flattenNumericMetrics, formatDate, titleizeMetric } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,27 +68,45 @@ const loginSchema = z.object({
 const connectSchema = z.object({
   label: z.string().min(2),
   emailHint: z.string().optional(),
-  cookieHeader: z.string().min(20),
 });
 
-function AuthShell({ onAuthenticated }: { onAuthenticated: (response: AuthResponse) => void }) {
+function AuthShell({
+  onAuthenticated,
+}: {
+  onAuthenticated: (response: AuthResponse) => void;
+}) {
   const [mode, setMode] = useState<'login' | 'register'>('register');
   const schema = mode === 'register' ? registerSchema : loginSchema;
   const form = useForm<{ name?: string; email: string; password: string }>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '', ...(mode === 'register' ? { name: '' } : {}) },
+    defaultValues: {
+      email: '',
+      password: '',
+      ...(mode === 'register' ? { name: '' } : {}),
+    },
   });
 
   const mutation = useMutation({
-    mutationFn: async (values: { name?: string; email: string; password: string }) => {
+    mutationFn: async (values: {
+      name?: string;
+      email: string;
+      password: string;
+    }) => {
       return mode === 'register'
         ? api.register(values as RegisterInput)
-        : api.login({ email: values.email, password: values.password } as LoginInput);
+        : api.login({
+            email: values.email,
+            password: values.password,
+          } as LoginInput);
     },
     onSuccess: (response) => {
       setToken(response.token);
       onAuthenticated(response);
-      toast.success(mode === 'register' ? 'Welcome to CodexDash.' : 'Signed in successfully.');
+      toast.success(
+        mode === 'register'
+          ? 'Welcome to CodexDash.'
+          : 'Signed in successfully.',
+      );
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -65,27 +117,46 @@ function AuthShell({ onAuthenticated }: { onAuthenticated: (response: AuthRespon
         <Card className="overflow-hidden border-sky-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.18),_transparent_28%),linear-gradient(180deg,rgba(15,23,42,0.94),rgba(2,6,23,0.92))]">
           <CardContent className="flex h-full flex-col justify-between gap-8 p-6 sm:p-8">
             <div className="space-y-5">
-              <Badge className="w-fit border-sky-400/30 bg-sky-400/10 text-sky-100">Mobile-first Codex monitor</Badge>
+              <Badge className="w-fit border-sky-400/30 bg-sky-400/10 text-sky-100">
+                Mobile-first Codex monitor
+              </Badge>
               <div className="space-y-4">
                 <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
                   CodexDash keeps every Codex account in one gorgeous live dashboard.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
-                  Sign into CodexDash, attach multiple OpenAI Codex sessions, and view combined limits,
+                  Sign into CodexDash, connect multiple OpenAI Codex accounts through a real login flow, and view combined limits,
                   remaining usage, raw API payloads, and per-account drilldowns from a single responsive UI.
                 </p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {[
-                { icon: Gauge, title: 'Unified usage', desc: 'Merge multiple OpenAI accounts into one overview.' },
-                { icon: ShieldCheck, title: 'Stored safely', desc: 'Session cookie headers are encrypted at rest.' },
-                { icon: Activity, title: 'Live detail', desc: 'See refreshed usage plus raw usage payloads.' },
+                {
+                  icon: Gauge,
+                  title: 'Unified usage',
+                  desc: 'Merge multiple OpenAI accounts into one overview.',
+                },
+                {
+                  icon: ShieldCheck,
+                  title: 'Stored safely',
+                  desc: 'OAuth session data is encrypted at rest.',
+                },
+                {
+                  icon: Activity,
+                  title: 'Live detail',
+                  desc: 'See refreshed usage plus raw usage payloads.',
+                },
               ].map((item) => (
-                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/6 p-4">
+                <div
+                  key={item.title}
+                  className="rounded-2xl border border-white/10 bg-white/6 p-4"
+                >
                   <item.icon className="mb-3 size-5 text-sky-300" />
                   <div className="font-medium text-white">{item.title}</div>
-                  <div className="mt-1 text-sm leading-6 text-slate-400">{item.desc}</div>
+                  <div className="mt-1 text-sm leading-6 text-slate-400">
+                    {item.desc}
+                  </div>
                 </div>
               ))}
             </div>
@@ -94,34 +165,63 @@ function AuthShell({ onAuthenticated }: { onAuthenticated: (response: AuthRespon
 
         <Card className="border-white/10 bg-slate-950/88">
           <CardHeader>
-            <CardTitle>{mode === 'register' ? 'Create your account' : 'Welcome back'}</CardTitle>
+            <CardTitle>
+              {mode === 'register' ? 'Create your account' : 'Welcome back'}
+            </CardTitle>
             <CardDescription>
               {mode === 'register'
-                ? 'Start with your CodexDash account, then connect OpenAI Codex sessions inside the dashboard.'
+                ? 'Start with your CodexDash account, then connect OpenAI Codex logins inside the dashboard.'
                 : 'Log in to continue monitoring your combined Codex usage.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+            <form
+              className="space-y-4"
+              onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+            >
               {mode === 'register' ? (
                 <div className="space-y-2">
                   <Label htmlFor="name">Display name</Label>
-                  <Input id="name" placeholder="Codex operator" {...form.register('name' as const)} />
-                  <p className="text-xs text-rose-300">{String(form.formState.errors.name?.message ?? '')}</p>
+                  <Input
+                    id="name"
+                    placeholder="Codex operator"
+                    {...form.register('name' as const)}
+                  />
+                  <p className="text-xs text-rose-300">
+                    {String(form.formState.errors.name?.message ?? '')}
+                  </p>
                 </div>
               ) : null}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" {...form.register('email')} />
-                <p className="text-xs text-rose-300">{String(form.formState.errors.email?.message ?? '')}</p>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  {...form.register('email')}
+                />
+                <p className="text-xs text-rose-300">
+                  {String(form.formState.errors.email?.message ?? '')}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="At least 8 characters" {...form.register('password')} />
-                <p className="text-xs text-rose-300">{String(form.formState.errors.password?.message ?? '')}</p>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  {...form.register('password')}
+                />
+                <p className="text-xs text-rose-300">
+                  {String(form.formState.errors.password?.message ?? '')}
+                </p>
               </div>
               <Button className="w-full" disabled={mutation.isPending} type="submit">
-                {mutation.isPending ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}
+                {mutation.isPending
+                  ? 'Please wait…'
+                  : mode === 'register'
+                    ? 'Create account'
+                    : 'Sign in'}
               </Button>
             </form>
 
@@ -129,12 +229,20 @@ function AuthShell({ onAuthenticated }: { onAuthenticated: (response: AuthRespon
 
             <div className="space-y-3 text-sm text-slate-400">
               <p>
-                OpenAI account connection is implemented as a session-based Codex login: after signing into
-                chatgpt.com in your browser, paste the authenticated <code className="rounded bg-white/10 px-1.5 py-0.5 text-slate-200">Cookie</code>{' '}
-                header into the connect flow.
+                OpenAI account connection now uses a real sign-in flow based on the Codex client OAuth pattern.
+                After you click connect, CodexDash opens OpenAI login in a popup and receives the callback locally.
               </p>
-              <Button type="button" variant="ghost" className="px-0 text-sky-300 hover:bg-transparent" onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>
-                {mode === 'register' ? 'Already have an account? Sign in' : 'Need an account? Register'}
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-0 text-sky-300 hover:bg-transparent"
+                onClick={() =>
+                  setMode(mode === 'register' ? 'login' : 'register')
+                }
+              >
+                {mode === 'register'
+                  ? 'Already have an account? Sign in'
+                  : 'Need an account? Register'}
               </Button>
             </div>
           </CardContent>
@@ -147,24 +255,111 @@ function AuthShell({ onAuthenticated }: { onAuthenticated: (response: AuthRespon
 function ConnectAccountDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [authorizeUrl, setAuthorizeUrl] = useState<string | null>(null);
+  const popupRef = useRef<Window | null>(null);
+  const handledAttemptStatusRef = useRef<string | null>(null);
   const form = useForm<z.infer<typeof connectSchema>>({
     resolver: zodResolver(connectSchema),
-    defaultValues: { label: '', emailHint: '', cookieHeader: '' },
+    defaultValues: { label: '', emailHint: '' },
   });
 
-  const mutation = useMutation({
-    mutationFn: api.connectAccount,
-    onSuccess: () => {
-      toast.success('OpenAI Codex session connected.');
-      setOpen(false);
-      form.reset();
-      void queryClient.invalidateQueries({ queryKey: ['usage-summary'] });
+  const startMutation = useMutation({
+    mutationFn: api.startCodexLogin,
+    onSuccess: (response) => {
+      setAttemptId(response.attemptId);
+      setAuthorizeUrl(response.authorizeUrl);
+      popupRef.current = window.open(
+        response.authorizeUrl,
+        'codexdash-openai-login',
+        'popup=yes,width=520,height=760',
+      );
+      if (!popupRef.current) {
+        toast.error('Popup was blocked. Use the fallback link inside the dialog.');
+      } else {
+        toast.success('Continue the OpenAI sign-in flow in the popup.');
+      }
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const attemptQuery = useQuery({
+    enabled: Boolean(attemptId),
+    queryKey: ['codex-login-attempt', attemptId],
+    queryFn: () => api.getCodexLoginAttempt(attemptId as string),
+    refetchInterval: (query) =>
+      query.state.data?.status === 'pending' ? 2_000 : false,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: api.cancelCodexLoginAttempt,
+    onSuccess: () => {
+      toast.success('Login attempt cancelled.');
+      setAttemptId(null);
+      setAuthorizeUrl(null);
+      popupRef.current?.close();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  useEffect(() => {
+    const attempt = attemptQuery.data;
+    if (!attempt) {
+      return;
+    }
+
+    const statusKey = `${attempt.id}:${attempt.status}:${attempt.completedAt ?? ''}:${attempt.lastError ?? ''}`;
+    if (handledAttemptStatusRef.current === statusKey) {
+      return;
+    }
+
+    if (attempt.status === 'completed') {
+      handledAttemptStatusRef.current = statusKey;
+      window.setTimeout(() => {
+        toast.success('OpenAI Codex account connected.');
+        setOpen(false);
+        setAttemptId(null);
+        setAuthorizeUrl(null);
+        form.reset();
+        popupRef.current?.close();
+        void queryClient.invalidateQueries({ queryKey: ['usage-summary'] });
+      }, 0);
+      return;
+    }
+
+    if (attempt.status === 'error' || attempt.status === 'expired') {
+      handledAttemptStatusRef.current = statusKey;
+      toast.error(attempt.lastError || 'OpenAI login failed.');
+    }
+  }, [attemptQuery.data, form, queryClient]);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type !== 'codexdash:oauth-complete') {
+        return;
+      }
+      if (event.data?.attemptId && event.data.attemptId === attemptId) {
+        void attemptQuery.refetch();
+      }
+    }
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [attemptId, attemptQuery]);
+
+  const attempt = attemptQuery.data;
+  const isPendingAttempt = attempt?.status === 'pending';
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next && isPendingAttempt && attemptId) {
+          cancelMutation.mutate(attemptId);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button className="w-full sm:w-auto">
           <CirclePlus className="size-4" />
@@ -173,37 +368,122 @@ function ConnectAccountDialog() {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connect an OpenAI Codex session</DialogTitle>
+          <DialogTitle>Connect an OpenAI Codex account</DialogTitle>
           <DialogDescription>
-            Paste the authenticated <code className="rounded bg-white/10 px-1 py-0.5 text-slate-200">Cookie</code>{' '}
-            header from a signed-in <code className="rounded bg-white/10 px-1 py-0.5 text-slate-200">chatgpt.com</code>{' '}
-            session. CodexDash will use it to call the official usage endpoint.
+            Start a real OpenAI sign-in flow. CodexDash opens the official login,
+            completes the Codex-style OAuth callback locally, then stores the
+            encrypted session for future usage refreshes.
           </DialogDescription>
         </DialogHeader>
-        <form className="mt-5 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
-          <div className="space-y-2">
-            <Label htmlFor="label">Account label</Label>
-            <Input id="label" placeholder="Primary Team Pro" {...form.register('label')} />
-            <p className="text-xs text-rose-300">{String(form.formState.errors.label?.message ?? '')}</p>
+
+        {attemptId ? (
+          <div className="mt-4 space-y-4">
+            <div className="rounded-2xl border border-sky-500/20 bg-sky-500/8 p-4 text-sm text-slate-300">
+              <div className="flex items-center gap-2 font-medium text-white">
+                <LoaderCircle className="size-4 animate-spin" />
+                Waiting for OpenAI login
+              </div>
+              <div className="mt-2 leading-6">
+                {attempt?.status === 'completed'
+                  ? 'The login finished successfully. Closing this dialog…'
+                  : 'Finish the sign-in flow in the popup window. CodexDash will detect the callback automatically.'}
+              </div>
+              <div className="mt-3 text-xs text-slate-400">
+                Expires: {formatDate(attempt?.expiresAt ?? null)}
+              </div>
+            </div>
+
+            {authorizeUrl ? (
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    popupRef.current = window.open(
+                      authorizeUrl,
+                      'codexdash-openai-login',
+                      'popup=yes,width=520,height=760',
+                    );
+                  }}
+                >
+                  <ExternalLink className="size-4" />
+                  Re-open login popup
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  asChild
+                >
+                  <a href={authorizeUrl} rel="noreferrer" target="_blank">
+                    <LinkIcon className="size-4" />
+                    Open login in new tab
+                  </a>
+                </Button>
+              </div>
+            ) : null}
+
+            {attempt?.lastError ? (
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/8 p-4 text-sm text-rose-200">
+                {attempt.lastError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void attemptQuery.refetch()}
+              >
+                <RefreshCw className="size-4" />
+                Check status
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={!attemptId || cancelMutation.isPending}
+                onClick={() => attemptId && cancelMutation.mutate(attemptId)}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="emailHint">Email hint</Label>
-            <Input id="emailHint" placeholder="ops@example.com" {...form.register('emailHint')} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cookieHeader">Cookie header</Label>
-            <textarea
-              id="cookieHeader"
-              className="min-h-36 w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white outline-none focus:border-sky-400/60"
-              placeholder="__Secure-next-auth.session-token=...; oai-did=..."
-              {...form.register('cookieHeader')}
-            />
-            <p className="text-xs text-rose-300">{String(form.formState.errors.cookieHeader?.message ?? '')}</p>
-          </div>
-          <Button className="w-full" disabled={mutation.isPending} type="submit">
-            {mutation.isPending ? 'Connecting…' : 'Validate and connect'}
-          </Button>
-        </form>
+        ) : (
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={form.handleSubmit((values) =>
+              startMutation.mutate(values as StartCodexLoginInput)
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="label">Account label</Label>
+              <Input
+                id="label"
+                placeholder="Primary Team Pro"
+                {...form.register('label')}
+              />
+              <p className="text-xs text-rose-300">
+                {String(form.formState.errors.label?.message ?? '')}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emailHint">Email hint</Label>
+              <Input
+                id="emailHint"
+                placeholder="ops@example.com"
+                {...form.register('emailHint')}
+              />
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/4 p-4 text-sm leading-6 text-slate-400">
+              CodexDash reuses the Codex public-client login shape discovered in
+              codex-pool, but presents it as an integrated popup flow instead of asking you to paste cookies manually.
+            </div>
+            <Button className="w-full" disabled={startMutation.isPending} type="submit">
+              {startMutation.isPending ? 'Preparing login…' : 'Continue to OpenAI'}
+            </Button>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -211,7 +491,10 @@ function ConnectAccountDialog() {
 
 function Dashboard() {
   const queryClient = useQueryClient();
-  const summaryQuery = useQuery({ queryKey: ['usage-summary'], queryFn: () => api.getUsageSummary(true) });
+  const summaryQuery = useQuery({
+    queryKey: ['usage-summary'],
+    queryFn: () => api.getUsageSummary(true),
+  });
   const userQuery = useQuery({ queryKey: ['me'], queryFn: api.me });
   const deleteMutation = useMutation({
     mutationFn: api.deleteAccount,
@@ -227,7 +510,11 @@ function Dashboard() {
   }, [summaryQuery.data?.aggregatedUsage]);
 
   if (summaryQuery.isLoading || userQuery.isLoading) {
-    return <div className="flex min-h-screen items-center justify-center text-slate-300">Loading CodexDash…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-slate-300">
+        Loading CodexDash…
+      </div>
+    );
   }
 
   if (summaryQuery.isError || userQuery.isError) {
@@ -237,7 +524,8 @@ function Dashboard() {
           <CardHeader>
             <CardTitle>Unable to load dashboard</CardTitle>
             <CardDescription>
-              {(summaryQuery.error as Error | undefined)?.message ?? (userQuery.error as Error | undefined)?.message}
+              {(summaryQuery.error as Error | undefined)?.message ??
+                (userQuery.error as Error | undefined)?.message}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,17 +540,23 @@ function Dashboard() {
   const user = userQuery.data!;
   const firstMetric = metricCards[0]?.value ?? 0;
   const secondMetric = metricCards[1]?.value ?? 0;
-  const progressValue = firstMetric + secondMetric > 0 ? (firstMetric / (firstMetric + secondMetric)) * 100 : 0;
+  const progressValue =
+    firstMetric + secondMetric > 0
+      ? (firstMetric / (firstMetric + secondMetric)) * 100
+      : 0;
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <Badge className="mb-3 w-fit border-emerald-400/20 bg-emerald-400/10 text-emerald-200">Signed in as {user.name}</Badge>
-          <h1 className="text-3xl font-semibold text-white sm:text-4xl">CodexDash overview</h1>
+          <Badge className="mb-3 w-fit border-emerald-400/20 bg-emerald-400/10 text-emerald-200">
+            Signed in as {user.name}
+          </Badge>
+          <h1 className="text-3xl font-semibold text-white sm:text-4xl">
+            CodexDash overview
+          </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-            Combined usage is refreshed by calling <code className="rounded bg-white/10 px-1.5 py-0.5 text-slate-200">chatgpt.com/backend-api/api/codex/usage</code>{' '}
-            for each attached OpenAI account and merging numeric fields into one dashboard.
+            Combined usage is refreshed by calling Codex usage endpoints for each attached OpenAI account and merging numeric fields into one dashboard.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -271,7 +565,13 @@ function Dashboard() {
             Refresh now
           </Button>
           <ConnectAccountDialog />
-          <Button variant="ghost" onClick={() => { clearToken(); window.location.reload(); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              clearToken();
+              window.location.reload();
+            }}
+          >
             <LogOut className="size-4" />
             Sign out
           </Button>
@@ -282,17 +582,27 @@ function Dashboard() {
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Unified capacity</CardTitle>
-            <CardDescription>Fast glance card for the first two numeric metrics extracted from the merged usage payload.</CardDescription>
+            <CardDescription>
+              Fast glance card for the first two numeric metrics extracted from the merged usage payload.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <div className="text-4xl font-semibold text-white">{firstMetric.toLocaleString()}</div>
-                <div className="mt-1 text-sm text-slate-400">{titleizeMetric(metricCards[0]?.label ?? 'Primary metric')}</div>
+                <div className="text-4xl font-semibold text-white">
+                  {firstMetric.toLocaleString()}
+                </div>
+                <div className="mt-1 text-sm text-slate-400">
+                  {titleizeMetric(metricCards[0]?.label ?? 'Primary metric')}
+                </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-semibold text-slate-100">{secondMetric.toLocaleString()}</div>
-                <div className="mt-1 text-sm text-slate-500">{titleizeMetric(metricCards[1]?.label ?? 'Secondary metric')}</div>
+                <div className="text-2xl font-semibold text-slate-100">
+                  {secondMetric.toLocaleString()}
+                </div>
+                <div className="mt-1 text-sm text-slate-500">
+                  {titleizeMetric(metricCards[1]?.label ?? 'Secondary metric')}
+                </div>
               </div>
             </div>
             <Progress value={progressValue} />
@@ -306,14 +616,28 @@ function Dashboard() {
         </Card>
 
         {[
-          { title: 'Connected sessions', value: summary.totals.totalAccounts, tone: 'text-sky-300' },
-          { title: 'Healthy sessions', value: summary.totals.activeAccounts, tone: 'text-emerald-300' },
-          { title: 'Errored sessions', value: summary.totals.erroredAccounts, tone: 'text-rose-300' },
+          {
+            title: 'Connected sessions',
+            value: summary.totals.totalAccounts,
+            tone: 'text-sky-300',
+          },
+          {
+            title: 'Healthy sessions',
+            value: summary.totals.activeAccounts,
+            tone: 'text-emerald-300',
+          },
+          {
+            title: 'Errored sessions',
+            value: summary.totals.erroredAccounts,
+            tone: 'text-rose-300',
+          },
         ].map((item) => (
           <Card key={item.title}>
             <CardHeader>
               <CardDescription>{item.title}</CardDescription>
-              <CardTitle className={item.tone}>{item.value.toLocaleString()}</CardTitle>
+              <CardTitle className={item.tone}>
+                {item.value.toLocaleString()}
+              </CardTitle>
             </CardHeader>
           </Card>
         ))}
@@ -323,19 +647,28 @@ function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Usage metrics</CardTitle>
-            <CardDescription>CodexDash extracts numeric leaf nodes from the aggregated usage payload for quick overview cards.</CardDescription>
+            <CardDescription>
+              CodexDash extracts numeric leaf nodes from the aggregated usage payload for quick overview cards.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {metricCards.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
-                No usage data yet. Connect an OpenAI account with a valid ChatGPT session cookie header to start refreshing.
+                No usage data yet. Connect an OpenAI account and complete the sign-in flow to start refreshing.
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
                 {metricCards.map((metric) => (
-                  <div key={metric.label} className="rounded-2xl border border-white/10 bg-white/4 p-4">
-                    <div className="text-sm text-slate-400">{titleizeMetric(metric.label)}</div>
-                    <div className="mt-3 text-2xl font-semibold text-white">{metric.value.toLocaleString()}</div>
+                  <div
+                    key={metric.label}
+                    className="rounded-2xl border border-white/10 bg-white/4 p-4"
+                  >
+                    <div className="text-sm text-slate-400">
+                      {titleizeMetric(metric.label)}
+                    </div>
+                    <div className="mt-3 text-2xl font-semibold text-white">
+                      {metric.value.toLocaleString()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -366,7 +699,11 @@ function Dashboard() {
             <Tabs defaultValue={summary.accounts[0]?.id}>
               <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
                 {summary.accounts.map((account) => (
-                  <TabsTrigger key={account.id} value={account.id} className="border border-white/10 bg-white/5 data-[state=active]:border-sky-400/40 data-[state=active]:bg-slate-900">
+                  <TabsTrigger
+                    key={account.id}
+                    value={account.id}
+                    className="border border-white/10 bg-white/5 data-[state=active]:border-sky-400/40 data-[state=active]:bg-slate-900"
+                  >
                     {account.label}
                   </TabsTrigger>
                 ))}
@@ -377,27 +714,61 @@ function Dashboard() {
                     <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-5">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="text-lg font-semibold text-white">{account.label}</div>
-                          <div className="mt-1 text-sm text-slate-400">{account.emailHint || 'No email hint provided'}</div>
+                          <div className="text-lg font-semibold text-white">
+                            {account.label}
+                          </div>
+                          <div className="mt-1 text-sm text-slate-400">
+                            {account.providerEmail ||
+                              account.emailHint ||
+                              'No email available yet'}
+                          </div>
                         </div>
-                        <Badge className={account.status === 'active' ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200' : 'border-rose-400/20 bg-rose-400/10 text-rose-200'}>
+                        <Badge
+                          className={
+                            account.status === 'active'
+                              ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                              : 'border-rose-400/20 bg-rose-400/10 text-rose-200'
+                          }
+                        >
                           {account.status}
                         </Badge>
                       </div>
                       <Separator />
                       <div className="space-y-2 text-sm text-slate-300">
+                        <div className="flex items-center gap-2">
+                          <Waypoints className="size-4 text-sky-300" />
+                          Auth: {account.authType}
+                        </div>
+                        <div>Plan: {account.planType || 'Unknown'}</div>
+                        <div>
+                          Provider account:{' '}
+                          <span className="text-slate-400">
+                            {account.providerAccountId || 'Unknown'}
+                          </span>
+                        </div>
+                        <div>Session expires: {formatDate(account.sessionExpiresAt)}</div>
                         <div>Last synced: {formatDate(account.lastSyncedAt)}</div>
                         <div>Connected: {formatDate(account.createdAt)}</div>
                         <div>
-                          Error: <span className="text-slate-400">{account.lastError || 'None'}</span>
+                          Error:{' '}
+                          <span className="text-slate-400">
+                            {account.lastError || 'None'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => summaryQuery.refetch()}>
+                        <Button
+                          variant="outline"
+                          onClick={() => summaryQuery.refetch()}
+                        >
                           <RefreshCw className="size-4" />
                           Refresh
                         </Button>
-                        <Button variant="destructive" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(account.id)}>
+                        <Button
+                          variant="destructive"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => deleteMutation.mutate(account.id)}
+                        >
                           <Trash2 className="size-4" />
                           Remove
                         </Button>
@@ -406,7 +777,11 @@ function Dashboard() {
                     <JsonViewer
                       title="Account payload"
                       description="Most recent raw usage JSON for this specific OpenAI Codex account."
-                      value={account.usage ?? { message: account.lastError || 'No usage fetched yet' }}
+                      value={
+                        account.usage ?? {
+                          message: account.lastError || 'No usage fetched yet',
+                        }
+                      }
                     />
                   </div>
                 </TabsContent>
@@ -425,7 +800,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_25%),linear-gradient(180deg,#020617_0%,#0f172a_48%,#020617_100%)] text-slate-100">
       <Toaster richColors position="top-center" theme="dark" />
-      {authenticated ? <Dashboard /> : <AuthShell onAuthenticated={() => setAuthenticated(true)} />}
+      {authenticated ? (
+        <Dashboard />
+      ) : (
+        <AuthShell onAuthenticated={() => setAuthenticated(true)} />
+      )}
     </div>
   );
 }

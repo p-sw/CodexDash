@@ -12,11 +12,25 @@ export type UserProfile = {
 
 export type CodexUsagePayload = Record<string, unknown>;
 
+export type ConnectedAccountStatus = 'active' | 'error';
+export type CodexAuthType = 'codex-oauth';
+export type CodexLoginAttemptStatus =
+  | 'pending'
+  | 'completed'
+  | 'error'
+  | 'expired'
+  | 'cancelled';
+
 export type ConnectedAccount = {
   id: string;
   label: string;
   emailHint: string | null;
-  status: 'active' | 'error';
+  providerEmail: string | null;
+  providerAccountId: string | null;
+  planType: string | null;
+  authType: CodexAuthType;
+  status: ConnectedAccountStatus;
+  sessionExpiresAt: string | null;
   lastSyncedAt: string | null;
   lastError: string | null;
   usage: CodexUsagePayload | null;
@@ -34,10 +48,26 @@ export type UsageSummary = {
   refreshedAt: string;
 };
 
-export type ConnectAccountInput = {
+export type StartCodexLoginInput = {
   label: string;
   emailHint?: string;
-  cookieHeader: string;
+};
+
+export type StartCodexLoginResponse = {
+  attemptId: string;
+  authorizeUrl: string;
+  expiresAt: string;
+};
+
+export type CodexLoginAttemptResponse = {
+  id: string;
+  label: string;
+  emailHint: string | null;
+  status: CodexLoginAttemptStatus;
+  expiresAt: string;
+  completedAt: string | null;
+  lastError: string | null;
+  connectedAccount: ConnectedAccount | null;
 };
 
 export type RegisterInput = {

@@ -1,9 +1,11 @@
 import type {
   AuthResponse,
-  ConnectAccountInput,
+  CodexLoginAttemptResponse,
   ConnectedAccount,
   LoginInput,
   RegisterInput,
+  StartCodexLoginInput,
+  StartCodexLoginResponse,
   UsageSummary,
   UserProfile,
 } from '@codexdash/shared-types';
@@ -27,7 +29,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: response.statusText }));
+    const error = await response
+      .json()
+      .catch(() => ({ message: response.statusText }));
     throw new Error(error.message ?? 'Request failed');
   }
 
@@ -36,12 +40,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   register: (input: RegisterInput) =>
-    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(input) }),
+    request<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   login: (input: LoginInput) =>
-    request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(input) }),
+    request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   me: () => request<UserProfile>('/auth/me'),
-  getUsageSummary: (refresh = true) => request<UsageSummary>(`/codex/usage-summary?refresh=${refresh}`),
-  connectAccount: (input: ConnectAccountInput) =>
-    request<ConnectedAccount>('/codex/accounts', { method: 'POST', body: JSON.stringify(input) }),
-  deleteAccount: (accountId: string) => request<{ ok: boolean }>(`/codex/accounts/${accountId}`, { method: 'DELETE' }),
+  getUsageSummary: (refresh = true) =>
+    request<UsageSummary>(`/codex/usage-summary?refresh=${refresh}`),
+  startCodexLogin: (input: StartCodexLoginInput) =>
+    request<StartCodexLoginResponse>('/codex/accounts/login/start', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  getCodexLoginAttempt: (attemptId: string) =>
+    request<CodexLoginAttemptResponse>(`/codex/accounts/login/${attemptId}`),
+  cancelCodexLoginAttempt: (attemptId: string) =>
+    request<{ ok: boolean }>(`/codex/accounts/login/${attemptId}/cancel`, {
+      method: 'POST',
+    }),
+  deleteAccount: (accountId: string) =>
+    request<{ ok: boolean }>(`/codex/accounts/${accountId}`, {
+      method: 'DELETE',
+    }),
+  listAccounts: () => request<ConnectedAccount[]>('/codex/accounts'),
 };

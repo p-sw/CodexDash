@@ -8,28 +8,57 @@ datasource db {
 }
 
 model User {
-  id           String          @id @default(cuid())
-  email        String          @unique
-  passwordHash String
-  name         String
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  accounts     OpenAiAccount[]
+  id            String             @id @default(cuid())
+  email         String             @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  accounts      OpenAiAccount[]
+  loginAttempts OpenAiLoginAttempt[]
 }
 
 model OpenAiAccount {
-  id              String   @id @default(cuid())
-  userId          String
-  label           String
-  emailHint       String?
-  encryptedCookie String
-  lastUsageJson   Json?
-  lastSyncedAt    DateTime?
-  lastError       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String              @id @default(cuid())
+  userId               String
+  label                String
+  emailHint            String?
+  providerEmail        String?
+  providerAccountId    String?
+  planType             String?
+  authType             String              @default("codex-oauth")
+  encryptedSessionJson String
+  sessionExpiresAt     DateTime?
+  lastValidatedAt      DateTime?
+  lastUsageJson        Json?
+  lastSyncedAt         DateTime?
+  lastError            String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  loginAttempts        OpenAiLoginAttempt[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model OpenAiLoginAttempt {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String?
+  label                 String
+  emailHint             String?
+  status                String    @default("pending")
+  state                 String    @unique
+  encryptedCodeVerifier String
+  expiresAt             DateTime
+  completedAt           DateTime?
+  lastError             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account OpenAiAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
 }

@@ -12,29 +12,32 @@ CodexDash is a mobile-first dashboard for monitoring multiple OpenAI Codex accou
 ## What it does
 
 - Create a CodexDash account and sign in
-- Connect multiple OpenAI Codex sessions under one CodexDash account
-- Refresh `https://chatgpt.com/backend-api/api/codex/usage` for each connected OpenAI account
-- Merge numeric usage fields into one aggregate dashboard
+- Connect multiple OpenAI Codex accounts under one CodexDash account
+- Start an integrated OpenAI login popup instead of pasting cookies manually
+- Refresh Codex usage data and merge numeric usage fields into one aggregate dashboard
 - Inspect each connected account individually with raw API payload details
 
-## Important note about "OpenAI Codex login"
+## OpenAI/Codex login flow
 
-OpenAI does not expose a simple third-party OAuth flow for this usage endpoint.
+CodexDash now reuses the public-client OAuth/PKCE shape found in [`darvell/codex-pool`](https://github.com/darvell/codex-pool), but wraps it in an app-native flow:
 
-This MVP implements OpenAI account connection as a **session-based login flow**:
+1. The user clicks **Connect OpenAI account**.
+2. CodexDash API creates a short-lived PKCE login attempt.
+3. The web app opens the OpenAI authorization page in a popup.
+4. After successful login, OpenAI redirects back to the local callback bridge at `http://localhost:1455/auth/callback`.
+5. The callback bridge exchanges the authorization code for tokens, encrypts the session JSON in SQLite, and posts the result back to the main app window.
+6. CodexDash refreshes usage using the saved OAuth session and shows both the aggregate view and per-account details.
 
-1. Sign in to `chatgpt.com` in your browser
-2. Copy the authenticated `Cookie` header
-3. Paste it into the **Connect OpenAI account** dialog in CodexDash
+### Important local-dev note
 
-The backend encrypts the cookie header before storing it in SQLite.
+This flow depends on the local callback bridge being reachable on `localhost:1455`. In local development, make sure that port is free before starting the API.
 
 ## Local development
 
 ```bash
 pnpm install
 pnpm --filter @codexdash/api exec prisma generate
-cd apps/api && DATABASE_URL=file:./dev.db pnpm exec prisma db push
+cd apps/api && DATABASE_URL=file:./dev.db pnpm exec prisma db push --accept-data-loss
 cd ../..
 pnpm --filter @codexdash/api start:dev
 pnpm --filter @codexdash/web dev --host 0.0.0.0
@@ -42,17 +45,14 @@ pnpm --filter @codexdash/web dev --host 0.0.0.0
 
 ## Environment variables
 
-### `apps/api/.env`
+### Root `.env`
 
 ```env
-JWT_SECRET=dev-jwt-secret-for-codexdash
-ENCRYPTION_SECRET=dev-encryption-secret-for-codexdash-32chars
+JWT_SECRET=***
+ENCRYPTION_SECRET=***
 DATABASE_URL=file:./dev.db
-```
-
-### `apps/web/.env`
-
-```env
+CODEXDASH_FRONTEND_ORIGIN=http://localhost:5173
+CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback
 VITE_API_BASE_URL=http://localhost:3001
 ```
 
@@ -71,6 +71,10 @@ curl http://localhost:3001/health
 - `POST /auth/login`
 - `GET /auth/me`
 - `GET /codex/accounts`
-- `POST /codex/accounts`
+- `POST /codex/accounts/login/start`
+- `GET /codex/accounts/login/attempts/:attemptId`
+- `DELETE /codex/accounts/login/attempts/:attemptId`
+- `GET /codex/accounts/login/callback`
+- `GET /codex/accounts`
 - `DELETE /codex/accounts/:accountId`
 - `GET /codex/usage-summary`
