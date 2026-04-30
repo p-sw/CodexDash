@@ -36,12 +36,11 @@ This flow works best when the local callback bridge is reachable on `localhost:1
 ## Local development
 
 ```bash
-pnpm install
-pnpm --filter @codexdash/api exec prisma generate
-cd apps/api && DATABASE_URL=file:./dev.db pnpm exec prisma db push --accept-data-loss
+bun install
+cd apps/api && DATABASE_URL=file:./dev.db bunx prisma db push --accept-data-loss
 cd ../..
-pnpm --filter @codexdash/api start:dev
-pnpm --filter @codexdash/web dev --host 0.0.0.0
+bun run dev:api
+bun run dev:web -- --host 0.0.0.0
 ```
 
 ## Environment variables
@@ -60,9 +59,9 @@ VITE_API_BASE_URL=http://localhost:3001
 ## Verification
 
 ```bash
-pnpm lint
-pnpm test
-pnpm build
+bun run lint
+bun run test
+bun run build
 curl http://localhost:3001/health
 ```
 

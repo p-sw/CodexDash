@@ -2,13 +2,26 @@
   "name": "codexdash",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@10.11.1",
+  "packageManager": "bun@1.3.13",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "trustedDependencies": [
+    "@nestjs/core",
+    "@prisma/client",
+    "@prisma/engines",
+    "argon2",
+    "prisma",
+    "unrs-resolver"
+  ],
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @codexdash/api --filter @codexdash/web dev",
-    "dev:api": "pnpm --filter @codexdash/api start:dev",
-    "dev:web": "pnpm --filter @codexdash/web dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "dev": "bun run --filter @codexdash/api --filter @codexdash/web --parallel dev",
+    "dev:api": "bun run --filter @codexdash/api start:dev",
+    "dev:web": "bun run --filter @codexdash/web dev",
+    "build": "bun run --filter @codexdash/api --filter @codexdash/web build",
+    "lint": "bun run --filter @codexdash/api --filter @codexdash/web lint",
+    "test": "bun run --filter @codexdash/api --if-present test",
+    "postinstall": "bun run --filter @codexdash/api prisma:generate"
   }
 }

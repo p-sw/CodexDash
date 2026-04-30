@@ -1,5 +1,5 @@
 node_modules
-.pnpm-store
+bun-debug.log*
 .env
 .env.*
 !.env.example
