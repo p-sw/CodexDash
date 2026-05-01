@@ -4,8 +4,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
 import { AuthResponse, UserProfile } from '@codexdash/shared-types';
+import { hashPassword, verifyPassword } from './password-hasher';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -30,7 +30,7 @@ export class AuthService {
       data: {
         email: dto.email.toLowerCase(),
         name: dto.name.trim(),
-        passwordHash: await argon2.hash(dto.password),
+        passwordHash: await hashPassword(dto.password),
       },
     });
 
@@ -42,7 +42,7 @@ export class AuthService {
       where: { email: dto.email.toLowerCase() },
     });
 
-    if (!user || !(await argon2.verify(user.passwordHash, dto.password))) {
+    if (!user || !(await verifyPassword(user.passwordHash, dto.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
 

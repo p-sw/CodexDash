@@ -12,19 +12,24 @@ COPY packages/shared-types/package.json packages/shared-types/package.json
 RUN bun install --frozen-lockfile
 
 COPY . .
-
 RUN bun run --filter @codexdash/web build
 RUN bun run --filter @codexdash/api bundle
+RUN mkdir -p /tmp/codexdash-runtime-data /tmp/codexdash-data-volume /tmp/codexdash-prisma \
+  && cp /app/node_modules/.bun/@prisma+client@*/node_modules/.prisma/client/libquery_engine-*.so.node /tmp/codexdash-prisma/libquery_engine.so.node
 
 FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
 
 ENV PORT=3001 \
     WEB_DIST_DIR=/app/web \
-    CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0
+    CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0 \
+    PRISMA_QUERY_ENGINE_LIBRARY=/app/prisma/libquery_engine.so.node
 
-COPY --from=builder /app/apps/api/dist/codexdash /app/codexdash
-COPY --from=builder /app/apps/web/dist /app/web
+COPY --from=builder --chown=65532:65532 /tmp/codexdash-runtime-data /home/processor/codexdash
+COPY --from=builder --chown=65532:65532 /tmp/codexdash-data-volume /data
+COPY --from=builder --chown=65532:65532 /app/apps/api/dist/codexdash /app/codexdash
+COPY --from=builder --chown=65532:65532 /tmp/codexdash-prisma/libquery_engine.so.node /app/prisma/libquery_engine.so.node
+COPY --from=builder --chown=65532:65532 /app/apps/web/dist /app/web
 
 EXPOSE 3001 1455
 

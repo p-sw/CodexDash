@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ensureSqliteSchema } from './sqlite-bootstrap';
 
 @Injectable()
 export class PrismaService
@@ -7,6 +8,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   async onModuleInit() {
+    await ensureSqliteSchema();
     await this.$connect();
   }
 

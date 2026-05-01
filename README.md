@@ -48,7 +48,9 @@ bun run dev:web -- --host 0.0.0.0
 The production image uses a multi-stage build:
 - `bun install` + frontend build in the builder stage
 - `bun build --compile` to emit a single API executable at `apps/api/dist/codexdash`
-- a distroless runtime image that only contains the compiled binary and the built web assets
+- the Prisma query engine shared library copied alongside the binary so the compiled app can still talk to SQLite
+- the container auto-bootstraps the SQLite schema for fresh `file:` databases before Prisma connects
+- a distroless non-root runtime image that only contains the compiled binary, Prisma engine library, and the built web assets
 
 Build the image:
 
@@ -76,6 +78,8 @@ Notes:
 - The bundled frontend now defaults to the browser's current origin for API calls, so the production image can be deployed behind any host name without rebuilding the web bundle.
 - `VITE_API_BASE_URL` is now optional and mainly useful for local development when Vite runs on a different origin than the API.
 - `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
+- Fresh SQLite `file:` databases are initialized automatically on first boot, so a brand-new named volume can be used without running `prisma db push` inside the container.
+- The image pre-creates writable `/data` and `/home/processor/codexdash` directories for non-root volume mounts, matching both the README example and the `processor` host-user bind/volume pattern.
 - If the callback bridge is still unreachable in your setup, the manual callback URL paste fallback remains available.
 
 ## Environment variables
