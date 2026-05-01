@@ -64,12 +64,12 @@ Run it:
 docker run --rm \
   -p 3001:3001 \
   -p 1455:1455 \
-  -e JWT_SECRET=replace-me \
-  -e ENCRYPTION_SECRET=replace-with-32-plus-chars \
-  -e DATABASE_URL=file:/data/codexdash.db \
+  -e JWT_SECRET=*** \
+  -e ENCRYPTION_SECRET=replac...hars \
+  -e DATABASE_URL=file:/app/data/codexdash.db \
   -e CODEXDASH_FRONTEND_ORIGIN=http://localhost:3001 \
-  -e CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback \
-  -v codexdash-data:/data \
+  -e CODEX_OAUTH_REDIRECT_URI=http:/...back \
+  -v ./codexdash-data:/app/data \
   codexdash:latest
 ```
 
@@ -77,9 +77,10 @@ Notes:
 - The container serves the built React app from the same process on port `3001`.
 - The bundled frontend now defaults to the browser's current origin for API calls, so the production image can be deployed behind any host name without rebuilding the web bundle.
 - `VITE_API_BASE_URL` is now optional and mainly useful for local development when Vite runs on a different origin than the API.
-- `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
+- `CODEX_OAUTH_CALLBACK_BIND_HOST=*** keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
 - Fresh SQLite `file:` databases are initialized automatically on first boot, so a brand-new named volume can be used without running `prisma db push` inside the container.
-- The image pre-creates writable `/data` and `/home/processor/codexdash` directories for non-root volume mounts, matching both the README example and the `processor` host-user bind/volume pattern.
+- Runtime assets now live under `/app`: the compiled server is `/app/codexdash`, the built SPA is `/app/web`, the Prisma engine is `/app/prisma/libquery_engine.so.node`, and writable app data defaults to `/app/data`.
+- If you want host persistence, bind-mount a host directory to `/app/data` (for example `-v /home/processor/codexdash:/app/data`) and keep `DATABASE_URL=file:/app/data/codexdash.db`.
 - If the callback bridge is still unreachable in your setup, the manual callback URL paste fallback remains available.
 
 ## Environment variables
