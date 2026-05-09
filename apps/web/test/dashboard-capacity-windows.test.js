@@ -11,7 +11,11 @@ describe('dashboard unified capacity windows', () => {
     expect(appSource).toContain('Secondary window');
     expect(appSource).toContain('const windowCards = [');
     expect(appSource).toContain("} => item.window !== null,");
-    expect(appSource).toContain('item.window.limitWindowSeconds !== null ? (');
+    expect(appSource).toContain('getUsageProgressTone(progressValue)');
+    expect(appSource).toContain('const fastestResetAt = getFastestResetAt(');
+    expect(appSource).toContain('Replenishes at');
+    expect(appSource).not.toContain('Window data from');
+    expect(appSource).not.toContain('Resets ');
     expect(appSource).not.toContain('<CardTitle>Usage metrics</CardTitle>');
     expect(appSource).not.toContain('flattenNumericMetrics(summaryQuery.data?.aggregatedUsage).slice(0, 6)');
     expect(appSource).not.toContain('const firstMetric = metricCards[0]?.value ?? 0;');

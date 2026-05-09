@@ -165,6 +165,22 @@ export function summarizeUsageWindows(values: Array<unknown>) {
   };
 }
 
+export function getFastestResetAt(values: Array<string | null>) {
+  return earliestDate(values);
+}
+
+export function getUsageProgressTone(value: number) {
+  if (value >= 80) {
+    return 'from-rose-500 to-red-400';
+  }
+
+  if (value >= 50) {
+    return 'from-amber-400 to-orange-300';
+  }
+
+  return 'from-sky-400 to-cyan-300';
+}
+
 export function formatDurationSeconds(value: number | null) {
   if (!value || value <= 0) {
     return 'Unknown window';

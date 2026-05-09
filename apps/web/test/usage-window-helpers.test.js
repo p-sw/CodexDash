@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   extractUsageWindows,
   formatDurationSeconds,
+  getFastestResetAt,
+  getUsageProgressTone,
   summarizeUsageWindows,
 } from '../src/lib/utils';
 
@@ -40,6 +42,22 @@ describe('usage window helpers', () => {
     expect(formatDurationSeconds(18_000)).toBe('5h window');
     expect(formatDurationSeconds(604_800)).toBe('7d window');
     expect(formatDurationSeconds(null)).toBe('Unknown window');
+  });
+
+  test('maps usage thresholds to warning progress colors', () => {
+    expect(getUsageProgressTone(49)).toContain('from-sky-400');
+    expect(getUsageProgressTone(50)).toContain('from-amber-400');
+    expect(getUsageProgressTone(80)).toContain('from-rose-500');
+  });
+
+  test('picks the fastest reset time across available windows', () => {
+    expect(
+      getFastestResetAt([
+        '2026-05-09T12:00:00.000Z',
+        null,
+        '2026-05-09T10:00:00.000Z',
+      ]),
+    ).toBe('2026-05-09T10:00:00.000Z');
   });
 
   test('summarizes windows across multiple account payloads without summing percentages', () => {

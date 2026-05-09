@@ -30,7 +30,14 @@ import {
 import { toast, Toaster } from 'sonner';
 import { api } from '@/lib/api';
 import { clearToken, getToken, setToken } from '@/lib/storage';
-import { summarizeUsageWindows, formatDate, formatDurationSeconds } from '@/lib/utils';
+import {
+  extractUsageWindows,
+  formatDate,
+  formatDurationSeconds,
+  getFastestResetAt,
+  getUsageProgressTone,
+  summarizeUsageWindows,
+} from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -618,6 +625,9 @@ function Dashboard() {
       window: NonNullable<typeof usageWindows.primary>;
     } => item.window !== null,
   );
+  const fastestResetAt = getFastestResetAt(
+    windowCards.map((item) => item.window.resetAt),
+  );
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
@@ -657,9 +667,9 @@ function Dashboard() {
           <CardHeader>
             <CardTitle>Unified capacity</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex h-full flex-col gap-4">
             {windowCards.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid flex-1 gap-4 md:auto-rows-fr md:grid-cols-2">
                 {windowCards.map((item) => {
                   const usedPercent = item.window.usedPercent;
                   const progressValue =
@@ -670,7 +680,7 @@ function Dashboard() {
                   return (
                     <div
                       key={item.title}
-                      className="rounded-2xl border border-white/10 bg-white/4 p-4"
+                      className="flex h-full flex-col justify-between rounded-2xl border border-white/10 bg-white/4 p-4"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
@@ -680,22 +690,18 @@ function Dashboard() {
                               ? `${usedPercent.toFixed(0)}%`
                               : '—'}
                           </div>
-                          <div className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
-                            {item.window.accountCount
-                              ? `Window data from ${item.window.accountCount} account${item.window.accountCount === 1 ? '' : 's'}`
-                              : 'Used'}
-                          </div>
                         </div>
                         <div className="text-right text-sm text-slate-400">
                           {item.window.limitWindowSeconds !== null ? (
                             <div>{formatDurationSeconds(item.window.limitWindowSeconds)}</div>
                           ) : null}
-                          <div className={item.window.limitWindowSeconds !== null ? 'mt-1' : ''}>
-                            Resets {formatDate(item.window.resetAt)}
-                          </div>
                         </div>
                       </div>
-                      <Progress value={progressValue} className="mt-4" />
+                      <Progress
+                        value={progressValue}
+                        className="mt-4"
+                        indicatorClassName={getUsageProgressTone(progressValue)}
+                      />
                     </div>
                   );
                 })}
@@ -706,6 +712,9 @@ function Dashboard() {
               </div>
             )}
             <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+              {fastestResetAt ? (
+                <span>Replenishes at {formatDate(fastestResetAt)}</span>
+              ) : null}
               <span>Accounts: {summary.totals.totalAccounts}</span>
               <span>Healthy: {summary.totals.activeAccounts}</span>
               <span>Errors: {summary.totals.erroredAccounts}</span>
@@ -767,7 +776,17 @@ function Dashboard() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {summary.accounts.map((account) => (
+              {summary.accounts.map((account) => {
+                const accountWindows = extractUsageWindows(account.usage);
+                const accountCapacityBars = [
+                  accountWindows.primary,
+                  accountWindows.secondary,
+                ].filter(
+                  (window): window is NonNullable<typeof accountWindows.primary> =>
+                    window !== null,
+                );
+
+                return (
                 <TabsContent key={account.id} value={account.id}>
                   <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-5">
                     <div className="flex items-start justify-between gap-4">
@@ -791,6 +810,31 @@ function Dashboard() {
                         {account.status}
                       </Badge>
                     </div>
+                    {accountCapacityBars.length > 0 ? (
+                      <div className="space-y-2">
+                        {accountCapacityBars.map((window, index) => {
+                          const progressValue =
+                            window.usedPercent !== null
+                              ? Math.max(0, Math.min(100, window.usedPercent))
+                              : 0;
+
+                          return (
+                            <div key={`${account.id}-${index}`} className="flex items-center gap-2">
+                              <Progress
+                                value={progressValue}
+                                className="h-1.5 flex-1"
+                                indicatorClassName={getUsageProgressTone(progressValue)}
+                              />
+                              <div className="min-w-10 text-right text-xs font-medium text-slate-400">
+                                {window.usedPercent !== null
+                                  ? `${window.usedPercent.toFixed(0)}%`
+                                  : '—'}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <Separator />
                     <div className="space-y-2 text-sm text-slate-300">
                       <div className="flex items-center gap-2">
@@ -833,7 +877,8 @@ function Dashboard() {
                     </div>
                   </div>
                 </TabsContent>
-              ))}
+                );
+              })}
             </Tabs>
           )}
         </CardContent>
