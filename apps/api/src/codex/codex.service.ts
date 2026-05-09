@@ -570,7 +570,7 @@ export class CodexService {
     const headers: Record<string, string> = {
       accept: 'application/json',
       authorization: `Bearer ${session.accessToken}`,
-      'user-agent': 'CodexDash/0.2 (+https://github.com/darvell/codex-pool)',
+      'user-agent': 'CodexDash/0.2',
       originator: 'codex_cli_rs',
     };
 

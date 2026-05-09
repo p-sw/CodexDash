@@ -546,8 +546,7 @@ function ConnectAccountDialog() {
               />
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/4 p-4 text-sm leading-6 text-slate-400">
-              CodexDash reuses the Codex public-client login shape discovered in
-              codex-pool, but presents it as an integrated popup flow with a manual pasted-URL fallback instead of asking you to paste cookies manually.
+              CodexDash opens the official OpenAI sign-in flow in a popup and also supports a manual pasted-URL fallback when the local callback bridge is unavailable.
             </div>
             <Button className="w-full" disabled={startMutation.isPending} type="submit">
               {startMutation.isPending ? 'Preparing login…' : 'Continue to OpenAI'}

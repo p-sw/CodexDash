@@ -26,7 +26,7 @@ CodexDash helps you keep track of several Codex-backed OpenAI accounts without b
 
 ## OpenAI/Codex login flow
 
-CodexDash now reuses the public-client OAuth/PKCE shape found in [`darvell/codex-pool`](https://github.com/darvell/codex-pool), but wraps it in an app-native flow:
+CodexDash uses an app-native OAuth/PKCE flow for connecting OpenAI accounts:
 
 1. The user clicks **Connect OpenAI account**.
 2. CodexDash API creates a short-lived PKCE login attempt.
