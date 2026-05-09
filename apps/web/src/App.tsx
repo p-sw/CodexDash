@@ -642,8 +642,8 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-        <Card className="md:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)] xl:items-stretch">
+        <Card className="h-full">
           <CardHeader>
             <CardTitle>Unified capacity</CardTitle>
           </CardHeader>
@@ -676,32 +676,34 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        {[
-          {
-            title: 'Connected sessions',
-            value: summary.totals.totalAccounts,
-            tone: 'text-sky-300',
-          },
-          {
-            title: 'Healthy sessions',
-            value: summary.totals.activeAccounts,
-            tone: 'text-emerald-300',
-          },
-          {
-            title: 'Errored sessions',
-            value: summary.totals.erroredAccounts,
-            tone: 'text-rose-300',
-          },
-        ].map((item) => (
-          <Card key={item.title}>
-            <CardHeader>
-              <CardDescription>{item.title}</CardDescription>
-              <CardTitle className={item.tone}>
-                {item.value.toLocaleString()}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
+        <div className="grid gap-4 xl:grid-rows-3">
+          {[
+            {
+              title: 'Connected sessions',
+              value: summary.totals.totalAccounts,
+              tone: 'text-sky-300',
+            },
+            {
+              title: 'Healthy sessions',
+              value: summary.totals.activeAccounts,
+              tone: 'text-emerald-300',
+            },
+            {
+              title: 'Errored sessions',
+              value: summary.totals.erroredAccounts,
+              tone: 'text-rose-300',
+            },
+          ].map((item) => (
+            <Card key={item.title} className="h-full">
+              <CardHeader>
+                <CardDescription>{item.title}</CardDescription>
+                <CardTitle className={item.tone}>
+                  {item.value.toLocaleString()}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
