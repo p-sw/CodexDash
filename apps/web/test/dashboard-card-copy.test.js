@@ -9,7 +9,6 @@ describe('dashboard card copy', () => {
     expect(appSource).toContain('<CardTitle>Unified capacity</CardTitle>');
     expect(appSource).toContain('<CardTitle>Usage metrics</CardTitle>');
     expect(appSource).toContain('<CardTitle>Connected OpenAI accounts</CardTitle>');
-    expect(appSource).toContain('description="Combined raw JSON."');
     expect(appSource).toContain(">Merged by default. Inspect each account below.<");
     expect(appSource).not.toContain(
       'Fast glance card for the first two numeric metrics extracted from the merged usage payload.',
@@ -20,8 +19,10 @@ describe('dashboard card copy', () => {
     expect(appSource).not.toContain(
       'Raw aggregated JSON merged from every attached OpenAI Codex account.',
     );
+    expect(appSource).not.toContain('Combined raw JSON.');
     expect(appSource).not.toContain(
       'By default, these accounts are merged into one Codex usage view. Switch tabs to inspect individual account payloads and timestamps.',
     );
+    expect(appSource).not.toContain('Raw JSON for this account.');
   });
 });

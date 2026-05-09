@@ -53,7 +53,6 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { JsonViewer } from '@/components/json-viewer';
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -706,42 +705,34 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card className="min-w-0">
-          <CardHeader>
-            <CardTitle>Usage metrics</CardTitle>
-          </CardHeader>
-          <CardContent className="min-w-0">
-            {metricCards.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
-                No usage data yet. Connect an OpenAI account and complete the sign-in flow to start refreshing.
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {metricCards.map((metric) => (
-                  <div
-                    key={metric.label}
-                    className="min-w-0 rounded-2xl border border-white/10 bg-white/4 p-4"
-                  >
-                    <div className="text-sm text-slate-400 break-words">
-                      {titleizeMetric(metric.label)}
-                    </div>
-                    <div className="mt-3 text-2xl font-semibold text-white">
-                      {metric.value.toLocaleString()}
-                    </div>
+      <Card className="mt-6 min-w-0">
+        <CardHeader>
+          <CardTitle>Usage metrics</CardTitle>
+        </CardHeader>
+        <CardContent className="min-w-0">
+          {metricCards.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
+              No usage data yet. Connect an OpenAI account and complete the sign-in flow to start refreshing.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {metricCards.map((metric) => (
+                <div
+                  key={metric.label}
+                  className="min-w-0 rounded-2xl border border-white/10 bg-white/4 p-4"
+                >
+                  <div className="text-sm text-slate-400 break-words">
+                    {titleizeMetric(metric.label)}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <JsonViewer
-          title="Merged payload"
-          description="Combined raw JSON."
-          value={summary.aggregatedUsage ?? { message: 'No data yet' }}
-        />
-      </div>
+                  <div className="mt-3 text-2xl font-semibold text-white">
+                    {metric.value.toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mt-6">
         <CardHeader>
@@ -768,79 +759,68 @@ function Dashboard() {
               </TabsList>
               {summary.accounts.map((account) => (
                 <TabsContent key={account.id} value={account.id}>
-                  <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-                    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-lg font-semibold text-white">
-                            {account.label}
-                          </div>
-                          <div className="mt-1 text-sm text-slate-400">
-                            {account.providerEmail ||
-                              account.emailHint ||
-                              'No email available yet'}
-                          </div>
+                  <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="text-lg font-semibold text-white">
+                          {account.label}
                         </div>
-                        <Badge
-                          className={
-                            account.status === 'active'
-                              ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
-                              : 'border-rose-400/20 bg-rose-400/10 text-rose-200'
-                          }
-                        >
-                          {account.status}
-                        </Badge>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2 text-sm text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <Waypoints className="size-4 text-sky-300" />
-                          Auth: {account.authType}
-                        </div>
-                        <div>Plan: {account.planType || 'Unknown'}</div>
-                        <div>
-                          Provider account:{' '}
-                          <span className="text-slate-400">
-                            {account.providerAccountId || 'Unknown'}
-                          </span>
-                        </div>
-                        <div>Session expires: {formatDate(account.sessionExpiresAt)}</div>
-                        <div>Last synced: {formatDate(account.lastSyncedAt)}</div>
-                        <div>Connected: {formatDate(account.createdAt)}</div>
-                        <div>
-                          Error:{' '}
-                          <span className="text-slate-400">
-                            {account.lastError || 'None'}
-                          </span>
+                        <div className="mt-1 text-sm text-slate-400">
+                          {account.providerEmail ||
+                            account.emailHint ||
+                            'No email available yet'}
                         </div>
                       </div>
-                      <div className="flex gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => summaryQuery.refetch()}
-                        >
-                          <RefreshCw className="size-4" />
-                          Refresh
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => deleteMutation.mutate(account.id)}
-                        >
-                          <Trash2 className="size-4" />
-                          Remove
-                        </Button>
+                      <Badge
+                        className={
+                          account.status === 'active'
+                            ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                            : 'border-rose-400/20 bg-rose-400/10 text-rose-200'
+                        }
+                      >
+                        {account.status}
+                      </Badge>
+                    </div>
+                    <Separator />
+                    <div className="space-y-2 text-sm text-slate-300">
+                      <div className="flex items-center gap-2">
+                        <Waypoints className="size-4 text-sky-300" />
+                        Auth: {account.authType}
+                      </div>
+                      <div>Plan: {account.planType || 'Unknown'}</div>
+                      <div>
+                        Provider account:{' '}
+                        <span className="text-slate-400">
+                          {account.providerAccountId || 'Unknown'}
+                        </span>
+                      </div>
+                      <div>Session expires: {formatDate(account.sessionExpiresAt)}</div>
+                      <div>Last synced: {formatDate(account.lastSyncedAt)}</div>
+                      <div>Connected: {formatDate(account.createdAt)}</div>
+                      <div>
+                        Error:{' '}
+                        <span className="text-slate-400">
+                          {account.lastError || 'None'}
+                        </span>
                       </div>
                     </div>
-                    <JsonViewer
-                      title="Account payload"
-                      description="Raw JSON for this account."
-                      value={
-                        account.usage ?? {
-                          message: account.lastError || 'No usage fetched yet',
-                        }
-                      }
-                    />
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => summaryQuery.refetch()}
+                      >
+                        <RefreshCw className="size-4" />
+                        Refresh
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => deleteMutation.mutate(account.id)}
+                      >
+                        <Trash2 className="size-4" />
+                        Remove
+                      </Button>
+                    </div>
                   </div>
                 </TabsContent>
               ))}
