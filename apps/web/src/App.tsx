@@ -646,9 +646,6 @@ function Dashboard() {
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Unified capacity</CardTitle>
-            <CardDescription>
-              Fast glance card for the first two numeric metrics extracted from the merged usage payload.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-end justify-between gap-4">
@@ -711,9 +708,6 @@ function Dashboard() {
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Usage metrics</CardTitle>
-            <CardDescription>
-              CodexDash extracts numeric leaf nodes from the aggregated usage payload for quick overview cards.
-            </CardDescription>
           </CardHeader>
           <CardContent className="min-w-0">
             {metricCards.length === 0 ? (
@@ -742,7 +736,7 @@ function Dashboard() {
 
         <JsonViewer
           title="Merged payload"
-          description="Raw aggregated JSON merged from every attached OpenAI Codex account."
+          description="Combined raw JSON."
           value={summary.aggregatedUsage ?? { message: 'No data yet' }}
         />
       </div>
@@ -750,9 +744,7 @@ function Dashboard() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Connected OpenAI accounts</CardTitle>
-          <CardDescription>
-            By default, these accounts are merged into one Codex usage view. Switch tabs to inspect individual account payloads and timestamps.
-          </CardDescription>
+          <CardDescription>Merged by default. Inspect each account below.</CardDescription>
         </CardHeader>
         <CardContent>
           {summary.accounts.length === 0 ? (
@@ -840,7 +832,7 @@ function Dashboard() {
                     </div>
                     <JsonViewer
                       title="Account payload"
-                      description="Most recent raw usage JSON for this specific OpenAI Codex account."
+                      description="Raw JSON for this account."
                       value={
                         account.usage ?? {
                           message: account.lastError || 'No usage fetched yet',
