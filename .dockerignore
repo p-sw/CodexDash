@@ -11,6 +11,9 @@ build
 bun-debug.log*
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+**/.env.example
 apps/api/prisma/dev.db*
 README.md
