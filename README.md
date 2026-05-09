@@ -1,6 +1,21 @@
 # CodexDash
 
-CodexDash is a mobile-first dashboard for monitoring multiple OpenAI Codex accounts from one place.
+CodexDash is a mobile-first dashboard for monitoring multiple OpenAI Codex accounts from one place. It combines shared capacity signals, connected-account health, and per-account usage into a single dark-mode dashboard built for fast daily checks.
+
+![CodexDash dashboard overview](docs/dashboard-overview.png)
+
+## Overview
+
+CodexDash helps you keep track of several Codex-backed OpenAI accounts without bouncing between browser sessions or manually comparing usage pages. The app gives you an aggregate capacity view, connected-account status cards, and compact per-account capacity bars so you can see both the fleet-level picture and the individual account state at a glance.
+
+## Features
+
+- **Unified capacity overview** with primary and secondary rate-limit windows
+- **Multi-account monitoring** under a single CodexDash user account
+- **Per-account capacity bars** for quick side-by-side usage checks
+- **Connected-session health summary** with active vs errored account counts
+- **Integrated OpenAI login flow** with popup-based OAuth and a manual callback fallback
+- **Responsive dashboard UI** designed to work well on mobile and desktop
 
 ## Stack
 
@@ -8,14 +23,6 @@ CodexDash is a mobile-first dashboard for monitoring multiple OpenAI Codex accou
 - **Backend:** NestJS
 - **Database:** Prisma + SQLite
 - **Auth:** CodexDash email/password auth with JWT
-
-## What it does
-
-- Create a CodexDash account and sign in
-- Connect multiple OpenAI Codex accounts under one CodexDash account
-- Start an integrated OpenAI login popup instead of pasting cookies manually
-- Refresh Codex usage data and merge numeric usage fields into one aggregate dashboard
-- Inspect each connected account individually with raw API payload details
 
 ## OpenAI/Codex login flow
 
