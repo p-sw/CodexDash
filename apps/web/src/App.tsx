@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,7 +30,7 @@ import {
 import { toast, Toaster } from 'sonner';
 import { api } from '@/lib/api';
 import { clearToken, getToken, setToken } from '@/lib/storage';
-import { flattenNumericMetrics, formatDate, titleizeMetric } from '@/lib/utils';
+import { summarizeUsageWindows, formatDate, formatDurationSeconds } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -568,10 +568,6 @@ function Dashboard() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const metricCards = useMemo(() => {
-    return flattenNumericMetrics(summaryQuery.data?.aggregatedUsage).slice(0, 6);
-  }, [summaryQuery.data?.aggregatedUsage]);
-
   if (summaryQuery.isLoading || userQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-slate-300">
@@ -601,12 +597,27 @@ function Dashboard() {
 
   const summary = summaryQuery.data!;
   const user = userQuery.data!;
-  const firstMetric = metricCards[0]?.value ?? 0;
-  const secondMetric = metricCards[1]?.value ?? 0;
-  const progressValue =
-    firstMetric + secondMetric > 0
-      ? (firstMetric / (firstMetric + secondMetric)) * 100
-      : 0;
+  const usageWindows = summarizeUsageWindows(
+    summary.accounts.map((account) => account.usage),
+  );
+  const windowCards = [
+    {
+      title: 'Primary window',
+      tone: 'text-sky-300',
+      window: usageWindows.primary,
+    },
+    {
+      title: 'Secondary window',
+      tone: 'text-violet-300',
+      window: usageWindows.secondary,
+    },
+  ].filter(
+    (item): item is {
+      title: string;
+      tone: string;
+      window: NonNullable<typeof usageWindows.primary>;
+    } => item.window !== null,
+  );
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
@@ -647,25 +658,53 @@ function Dashboard() {
             <CardTitle>Unified capacity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <div className="text-4xl font-semibold text-white">
-                  {firstMetric.toLocaleString()}
-                </div>
-                <div className="mt-1 text-sm text-slate-400">
-                  {titleizeMetric(metricCards[0]?.label ?? 'Primary metric')}
-                </div>
+            {windowCards.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {windowCards.map((item) => {
+                  const usedPercent = item.window.usedPercent;
+                  const progressValue =
+                    usedPercent !== null && usedPercent !== undefined
+                      ? Math.max(0, Math.min(100, usedPercent))
+                      : 0;
+
+                  return (
+                    <div
+                      key={item.title}
+                      className="rounded-2xl border border-white/10 bg-white/4 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-sm text-slate-400">{item.title}</div>
+                          <div className={`mt-2 text-3xl font-semibold ${item.tone}`}>
+                            {usedPercent !== null && usedPercent !== undefined
+                              ? `${usedPercent.toFixed(0)}%`
+                              : '—'}
+                          </div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
+                            {item.window.accountCount
+                              ? `Window data from ${item.window.accountCount} account${item.window.accountCount === 1 ? '' : 's'}`
+                              : 'Used'}
+                          </div>
+                        </div>
+                        <div className="text-right text-sm text-slate-400">
+                          {item.window.limitWindowSeconds !== null ? (
+                            <div>{formatDurationSeconds(item.window.limitWindowSeconds)}</div>
+                          ) : null}
+                          <div className={item.window.limitWindowSeconds !== null ? 'mt-1' : ''}>
+                            Resets {formatDate(item.window.resetAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <Progress value={progressValue} className="mt-4" />
+                    </div>
+                  );
+                })}
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-semibold text-slate-100">
-                  {secondMetric.toLocaleString()}
-                </div>
-                <div className="mt-1 text-sm text-slate-500">
-                  {titleizeMetric(metricCards[1]?.label ?? 'Secondary metric')}
-                </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
+                No rate-limit window data yet. Connect an OpenAI account and refresh to load Codex usage windows.
               </div>
-            </div>
-            <Progress value={progressValue} />
+            )}
             <div className="flex flex-wrap gap-3 text-sm text-slate-400">
               <span>Accounts: {summary.totals.totalAccounts}</span>
               <span>Healthy: {summary.totals.activeAccounts}</span>
@@ -704,35 +743,6 @@ function Dashboard() {
           ))}
         </div>
       </div>
-
-      <Card className="mt-6 min-w-0">
-        <CardHeader>
-          <CardTitle>Usage metrics</CardTitle>
-        </CardHeader>
-        <CardContent className="min-w-0">
-          {metricCards.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
-              No usage data yet. Connect an OpenAI account and complete the sign-in flow to start refreshing.
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {metricCards.map((metric) => (
-                <div
-                  key={metric.label}
-                  className="min-w-0 rounded-2xl border border-white/10 bg-white/4 p-4"
-                >
-                  <div className="text-sm text-slate-400 break-words">
-                    {titleizeMetric(metric.label)}
-                  </div>
-                  <div className="mt-3 text-2xl font-semibold text-white">
-                    {metric.value.toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <Card className="mt-6">
         <CardHeader>

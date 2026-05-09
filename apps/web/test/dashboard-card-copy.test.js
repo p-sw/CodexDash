@@ -7,8 +7,10 @@ const appSource = readFileSync(join(import.meta.dir, '../src/App.tsx'), 'utf8');
 describe('dashboard card copy', () => {
   test('removes verbose dashboard card descriptions and keeps concise labels', () => {
     expect(appSource).toContain('<CardTitle>Unified capacity</CardTitle>');
-    expect(appSource).toContain('<CardTitle>Usage metrics</CardTitle>');
     expect(appSource).toContain('<CardTitle>Connected OpenAI accounts</CardTitle>');
+    expect(appSource).toContain('Primary window');
+    expect(appSource).toContain('Secondary window');
+    expect(appSource).not.toContain('<CardTitle>Usage metrics</CardTitle>');
     expect(appSource).toContain(">Merged by default. Inspect each account below.<");
     expect(appSource).not.toContain(
       'Fast glance card for the first two numeric metrics extracted from the merged usage payload.',
