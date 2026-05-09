@@ -708,14 +708,14 @@ function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Usage metrics</CardTitle>
             <CardDescription>
               CodexDash extracts numeric leaf nodes from the aggregated usage payload for quick overview cards.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {metricCards.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
                 No usage data yet. Connect an OpenAI account and complete the sign-in flow to start refreshing.
@@ -725,9 +725,9 @@ function Dashboard() {
                 {metricCards.map((metric) => (
                   <div
                     key={metric.label}
-                    className="rounded-2xl border border-white/10 bg-white/4 p-4"
+                    className="min-w-0 rounded-2xl border border-white/10 bg-white/4 p-4"
                   >
-                    <div className="text-sm text-slate-400">
+                    <div className="text-sm text-slate-400 break-words">
                       {titleizeMetric(metric.label)}
                     </div>
                     <div className="mt-3 text-2xl font-semibold text-white">
