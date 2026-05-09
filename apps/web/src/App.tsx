@@ -628,6 +628,17 @@ function Dashboard() {
   const fastestResetAt = getFastestResetAt(
     windowCards.map((item) => item.window.resetAt),
   );
+  const accountCapacityItems = summary.accounts.map((account) => {
+    const accountWindows = extractUsageWindows(account.usage);
+    const accountCapacityBars = [accountWindows.primary, accountWindows.secondary].filter(
+      (window): window is NonNullable<typeof accountWindows.primary> => window !== null,
+    );
+
+    return {
+      account,
+      accountCapacityBars,
+    };
+  });
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
@@ -663,13 +674,13 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)] xl:items-stretch">
-        <Card className="h-full">
+        <Card className="flex h-full flex-col overflow-hidden">
           <CardHeader>
             <CardTitle>Unified capacity</CardTitle>
           </CardHeader>
-          <CardContent className="flex h-full flex-col gap-4">
+          <CardContent className="flex flex-1 flex-col gap-4">
             {windowCards.length > 0 ? (
-              <div className="grid flex-1 gap-4 md:auto-rows-fr md:grid-cols-2">
+              <div className="grid flex-1 items-stretch gap-4 md:grid-cols-2">
                 {windowCards.map((item) => {
                   const usedPercent = item.window.usedPercent;
                   const progressValue =
@@ -680,7 +691,7 @@ function Dashboard() {
                   return (
                     <div
                       key={item.title}
-                      className="flex h-full flex-col justify-between rounded-2xl border border-white/10 bg-white/4 p-4"
+                      className="flex min-h-0 flex-1 flex-col justify-between rounded-2xl border border-white/10 bg-white/4 p-4"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
@@ -695,6 +706,9 @@ function Dashboard() {
                           {item.window.limitWindowSeconds !== null ? (
                             <div>{formatDurationSeconds(item.window.limitWindowSeconds)}</div>
                           ) : null}
+                          <div className={item.window.limitWindowSeconds !== null ? 'mt-1' : ''}>
+                            Replenishes at {formatDate(item.window.resetAt)}
+                          </div>
                         </div>
                       </div>
                       <Progress
@@ -713,7 +727,7 @@ function Dashboard() {
             )}
             <div className="flex flex-wrap gap-3 text-sm text-slate-400">
               {fastestResetAt ? (
-                <span>Replenishes at {formatDate(fastestResetAt)}</span>
+                <span>Earliest replenishment {formatDate(fastestResetAt)}</span>
               ) : null}
               <span>Accounts: {summary.totals.totalAccounts}</span>
               <span>Healthy: {summary.totals.activeAccounts}</span>
@@ -776,17 +790,7 @@ function Dashboard() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {summary.accounts.map((account) => {
-                const accountWindows = extractUsageWindows(account.usage);
-                const accountCapacityBars = [
-                  accountWindows.primary,
-                  accountWindows.secondary,
-                ].filter(
-                  (window): window is NonNullable<typeof accountWindows.primary> =>
-                    window !== null,
-                );
-
-                return (
+              {summary.accounts.map((account) => (
                 <TabsContent key={account.id} value={account.id}>
                   <div className="space-y-4 rounded-3xl border border-white/10 bg-white/4 p-5">
                     <div className="flex items-start justify-between gap-4">
@@ -810,31 +814,6 @@ function Dashboard() {
                         {account.status}
                       </Badge>
                     </div>
-                    {accountCapacityBars.length > 0 ? (
-                      <div className="space-y-2">
-                        {accountCapacityBars.map((window, index) => {
-                          const progressValue =
-                            window.usedPercent !== null
-                              ? Math.max(0, Math.min(100, window.usedPercent))
-                              : 0;
-
-                          return (
-                            <div key={`${account.id}-${index}`} className="flex items-center gap-2">
-                              <Progress
-                                value={progressValue}
-                                className="h-1.5 flex-1"
-                                indicatorClassName={getUsageProgressTone(progressValue)}
-                              />
-                              <div className="min-w-10 text-right text-xs font-medium text-slate-400">
-                                {window.usedPercent !== null
-                                  ? `${window.usedPercent.toFixed(0)}%`
-                                  : '—'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : null}
                     <Separator />
                     <div className="space-y-2 text-sm text-slate-300">
                       <div className="flex items-center gap-2">
@@ -877,9 +856,76 @@ function Dashboard() {
                     </div>
                   </div>
                 </TabsContent>
-                );
-              })}
+              ))}
             </Tabs>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Per-account capacity</CardTitle>
+          <CardDescription>Compact rate-limit bars for each connected OpenAI account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {accountCapacityItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/3 p-6 text-sm text-slate-400">
+              No account capacity data yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {accountCapacityItems.map(({ account, accountCapacityBars }) => (
+                <div
+                  key={account.id}
+                  className="space-y-2 rounded-2xl border border-white/10 bg-white/4 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-white">{account.label}</div>
+                      <div className="truncate text-xs text-slate-400">
+                        {account.providerEmail || account.emailHint || 'No email available yet'}
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        account.status === 'active'
+                          ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200'
+                          : 'border-rose-400/20 bg-rose-400/10 text-rose-200'
+                      }
+                    >
+                      {account.status}
+                    </Badge>
+                  </div>
+                  {accountCapacityBars.length > 0 ? (
+                    <div className="space-y-2">
+                      {accountCapacityBars.map((window, index) => {
+                        const progressValue =
+                          window.usedPercent !== null
+                            ? Math.max(0, Math.min(100, window.usedPercent))
+                            : 0;
+
+                        return (
+                          <div key={`${account.id}-${index}`} className="flex items-center gap-2">
+                            <Progress
+                              value={progressValue}
+                              className="h-1.5 flex-1"
+                              indicatorClassName={getUsageProgressTone(progressValue)}
+                            />
+                            <div className="min-w-10 text-right text-xs font-medium text-slate-400">
+                              {window.usedPercent !== null
+                                ? `${window.usedPercent.toFixed(0)}%`
+                                : '—'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">No window data yet.</div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

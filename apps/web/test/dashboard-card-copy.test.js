@@ -11,6 +11,7 @@ describe('dashboard card copy', () => {
     expect(appSource).toContain('Primary window');
     expect(appSource).toContain('Secondary window');
     expect(appSource).toContain('Replenishes at');
+    expect(appSource).not.toContain('Replenish after');
     expect(appSource).not.toContain('Window data from');
     expect(appSource).not.toContain('<CardTitle>Usage metrics</CardTitle>');
     expect(appSource).toContain(">Merged by default. Inspect each account below.<");

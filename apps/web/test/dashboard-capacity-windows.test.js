@@ -14,6 +14,7 @@ describe('dashboard unified capacity windows', () => {
     expect(appSource).toContain('getUsageProgressTone(progressValue)');
     expect(appSource).toContain('const fastestResetAt = getFastestResetAt(');
     expect(appSource).toContain('Replenishes at');
+    expect(appSource).not.toContain('Replenish after');
     expect(appSource).not.toContain('Window data from');
     expect(appSource).not.toContain('Resets ');
     expect(appSource).not.toContain('<CardTitle>Usage metrics</CardTitle>');
