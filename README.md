@@ -59,32 +59,96 @@ The production image uses a multi-stage build:
 - the container auto-bootstraps the SQLite schema for fresh `file:` databases before Prisma connects
 - a distroless non-root runtime image that only contains the compiled binary, Prisma engine library, and the built web assets
 
-Build the image:
+Build the image locally:
 
 ```bash
 docker build -t codexdash:latest .
 ```
 
-Run it:
+Pull a published image from GitHub Container Registry:
 
 ```bash
-docker run --rm \
-  -p 3001:3001 \
-  -p 1455:1455 \
-  -e JWT_SECRET=*** \
-  -e ENCRYPTION_SECRET=replac...hars \
-  -e DATABASE_URL=file:/app/data/codexdash.db \
-  -e CODEXDASH_FRONTEND_ORIGIN=http://localhost:3001 \
-  -e CODEX_OAUTH_REDIRECT_URI=http:/...back \
-  -v ./codexdash-data:/app/data \
-  codexdash:latest
+docker pull ghcr.io/p-sw/codexdash:latest
+# or pin a release tag
+docker pull ghcr.io/p-sw/codexdash:v1.0.0
 ```
 
-Notes:
+## Docker deployment guide
+
+### 1. Choose an image tag
+
+CodexDash publishes versioned container images to GHCR:
+
+- `ghcr.io/p-sw/codexdash:latest` for the newest stable release
+- `ghcr.io/p-sw/codexdash:v1.0.0` for an exact release
+- `ghcr.io/p-sw/codexdash:main` for the latest `main` branch build
+
+Use a versioned tag in production when you want repeatable deploys and easier rollbacks.
+
+### 2. Create a persistent data directory
+
+```bash
+mkdir -p ./codexdash-data
+```
+
+CodexDash stores its SQLite database under `/app/data`, so mount a host directory or named volume there if you want data to survive container restarts.
+
+### 3. Start the container
+
+```bash
+docker run -d \
+  --name codexdash \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -p 1455:1455 \
+  -e JWT_SECRET=replace-with-a-long-random-secret \
+  -e ENCRYPTION_SECRET=replace-with-a-long-random-secret \
+  -e DATABASE_URL=file:/app/data/codexdash.db \
+  -e CODEXDASH_FRONTEND_ORIGIN=http://localhost:3001 \
+  -e CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback \
+  -e CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0 \
+  -v ./codexdash-data:/app/data \
+  ghcr.io/p-sw/codexdash:latest
+```
+
+### 4. Verify the deployment
+
+```bash
+curl http://localhost:3001/health
+docker logs codexdash --tail 100
+```
+
+If the API is healthy, open `http://localhost:3001` in a browser and complete the normal CodexDash login flow.
+
+### 5. Upgrade to a newer image
+
+```bash
+docker pull ghcr.io/p-sw/codexdash:v1.0.0
+docker stop codexdash
+docker rm codexdash
+
+docker run -d \
+  --name codexdash \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -p 1455:1455 \
+  -e JWT_SECRET=replace-with-a-long-random-secret \
+  -e ENCRYPTION_SECRET=replace-with-a-long-random-secret \
+  -e DATABASE_URL=file:/app/data/codexdash.db \
+  -e CODEXDASH_FRONTEND_ORIGIN=http://localhost:3001 \
+  -e CODEX_OAUTH_REDIRECT_URI=http://localhost:1455/auth/callback \
+  -e CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0 \
+  -v ./codexdash-data:/app/data \
+  ghcr.io/p-sw/codexdash:v1.0.0
+```
+
+Because the database lives in `/app/data`, re-creating the container does not remove application data as long as the same mounted directory or volume is reused.
+
+### Notes
 - The container serves the built React app from the same process on port `3001`.
 - The bundled frontend now defaults to the browser's current origin for API calls, so the production image can be deployed behind any host name without rebuilding the web bundle.
-- `VITE_API_BASE_URL` is now optional and mainly useful for local development when Vite runs on a different origin than the API.
-- `CODEX_OAUTH_CALLBACK_BIND_HOST=*** keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
+- `VITE_API_BASE_URL` is optional and mainly useful for local development when Vite runs on a different origin than the API.
+- `CODEX_OAUTH_CALLBACK_BIND_HOST=0.0.0.0` keeps the callback bridge reachable through Docker port publishing while the public redirect URL can still stay on `localhost:1455`.
 - Fresh SQLite `file:` databases are initialized automatically on first boot, so a brand-new named volume can be used without running `prisma db push` inside the container.
 - Runtime assets now live under `/app`: the compiled server is `/app/codexdash`, the built SPA is `/app/web`, the Prisma engine is `/app/prisma/libquery_engine.so.node`, and writable app data defaults to `/app/data`.
 - If you want host persistence, bind-mount a host directory to `/app/data` (for example `-v /home/processor/codexdash:/app/data`) and keep `DATABASE_URL=file:/app/data/codexdash.db`.
