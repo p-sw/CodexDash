@@ -384,7 +384,7 @@ function ConnectAccountDialog() {
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
+      onOpenChange={(next: boolean) => {
         setOpen(next);
         if (!next && isPendingAttempt && attemptId) {
           cancelMutation.mutate(attemptId);

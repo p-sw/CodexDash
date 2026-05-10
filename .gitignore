@@ -12,4 +12,3 @@ apps/api/prisma/dev.db-journal
 apps/api/prisma/dev.db-shm
 apps/api/prisma/dev.db-wal
 apps/web/components.json
-apps/web/src/components/ui
